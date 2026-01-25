@@ -40,7 +40,7 @@ cd backend
 poetry install
 
 # Run the development server
-poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+poetry run letters
 ```
 
 ### Frontend Setup
@@ -55,7 +55,7 @@ npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3000` and will proxy API requests to the backend at `http://localhost:8000`.
+The frontend will be available at `http://localhost:7001` and will proxy API requests to the backend at `http://localhost:7000`.
 
 ## API Endpoints
 

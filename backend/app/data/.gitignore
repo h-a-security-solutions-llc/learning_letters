@@ -1,0 +1,6 @@
+# Cache files - regenerated automatically
+guides.db
+*.db
+
+# Keep audio files
+!audio/

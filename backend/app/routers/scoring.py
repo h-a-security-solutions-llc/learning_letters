@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -17,6 +18,7 @@ class ScoreResponse(BaseModel):
     feedback: str
     details: dict
     reference_image: str
+    debug: Optional[dict] = None
 
 
 @router.post("/score", response_model=ScoreResponse)

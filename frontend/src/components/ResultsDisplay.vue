@@ -37,6 +37,71 @@
       </div>
     </div>
 
+    <!-- Best of 3 Attempts Display -->
+    <div v-if="bestOf3Mode && attempts.length > 0" class="attempts-section">
+      <h3>Your 3 Attempts</h3>
+      <div class="attempts-grid">
+        <div
+          v-for="(attempt, index) in attempts"
+          :key="index"
+          class="attempt-card"
+          :class="{ best: attempt.scoreResult.score === scoreData.score }"
+        >
+          <div class="attempt-label">
+            <span>#{{ index + 1 }}</span>
+            <span v-if="attempt.scoreResult.score === scoreData.score" class="best-badge">BEST</span>
+          </div>
+          <img :src="attempt.imageData" alt="Attempt drawing" />
+          <div class="attempt-score">{{ attempt.scoreResult.score }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug Section - Normalized Images (controlled by Debug toggle in main controls) -->
+    <div v-if="scoreData.debug && showDebugMode" class="debug-section">
+      <h3>How Your Drawing Was Processed</h3>
+      <p class="debug-explanation">These images show the transformations applied to your drawing before scoring:</p>
+      <div class="debug-grid">
+        <div class="debug-item">
+          <span>1. Centered</span>
+          <img :src="scoreData.debug.drawn_centered" alt="Centered drawing" />
+          <small>Position normalized</small>
+        </div>
+        <div class="debug-item">
+          <span>2. Before Sanding</span>
+          <img :src="scoreData.debug.drawn_unsanded" alt="Before sanding" />
+          <small>Line thickness normalized</small>
+        </div>
+        <div class="debug-item">
+          <span>3. After Sanding</span>
+          <img :src="scoreData.debug.drawn_sanded" alt="After sanding" />
+          <small>Minor overshoots removed</small>
+        </div>
+        <div class="debug-item highlight">
+          <span>Perfect Target</span>
+          <img :src="scoreData.debug.reference_normalized" alt="Reference target" />
+          <small>What we compare against</small>
+        </div>
+      </div>
+      <div class="debug-details">
+        <div class="detail-item">
+          <span class="detail-label">Coverage</span>
+          <span class="detail-value">{{ scoreData.details.coverage }}%</span>
+          <small>How much of the letter you traced</small>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Accuracy</span>
+          <span class="detail-value">{{ scoreData.details.accuracy }}%</span>
+          <small>How well you stayed on the lines</small>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Similarity</span>
+          <span class="detail-value">{{ scoreData.details.similarity }}%</span>
+          <small>Overall shape match</small>
+        </div>
+      </div>
+    </div>
+
     <!-- Character Info -->
     <div class="character-info-section">
       <div class="character-large">{{ character }}</div>
@@ -64,7 +129,7 @@
 </template>
 
 <script>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, toRefs } from 'vue'
 import axios from 'axios'
 
 export default {
@@ -81,10 +146,23 @@ export default {
     userDrawing: {
       type: String,
       required: true
+    },
+    attempts: {
+      type: Array,
+      default: () => []
+    },
+    bestOf3Mode: {
+      type: Boolean,
+      default: false
+    },
+    showDebugMode: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['try-again', 'next'],
   setup(props) {
+    const { showDebugMode } = toRefs(props)
     const characterData = ref(null)
 
     const fetchCharacterData = async () => {
@@ -169,7 +247,8 @@ export default {
 
     return {
       characterData,
-      speakCharacter
+      speakCharacter,
+      showDebugMode
     }
   }
 }
@@ -360,6 +439,171 @@ export default {
   color: white;
 }
 
+.attempts-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 15px;
+}
+
+.attempts-section h3 {
+  color: white;
+  font-size: 1rem;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.attempts-grid {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.attempt-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.attempt-card.best {
+  background: rgba(78, 205, 196, 0.3);
+  box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+}
+
+.attempt-label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.best-badge {
+  background: #4ECDC4;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.attempt-card img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  background: white;
+  border-radius: 8px;
+}
+
+.attempt-score {
+  color: #FFE66D;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 5px;
+}
+
+.debug-section {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  padding: 15px;
+  margin-top: 10px;
+}
+
+.debug-section h3 {
+  color: #FFE66D;
+  font-size: 1rem;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.debug-explanation {
+  color: #aaa;
+  font-size: 0.8rem;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.debug-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.debug-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.debug-item.highlight {
+  background: rgba(78, 205, 196, 0.2);
+  border: 1px solid rgba(78, 205, 196, 0.5);
+}
+
+.debug-item span {
+  color: white;
+  font-size: 0.75rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.debug-item small {
+  color: #888;
+  font-size: 0.65rem;
+  text-align: center;
+}
+
+.debug-item img {
+  width: 64px;
+  height: 64px;
+  background: white;
+  border-radius: 5px;
+  image-rendering: pixelated;
+}
+
+.debug-details {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.detail-label {
+  color: #aaa;
+  font-size: 0.75rem;
+}
+
+.detail-value {
+  color: #4ECDC4;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.detail-item small {
+  color: #666;
+  font-size: 0.65rem;
+  text-align: center;
+}
+
 @media (max-width: 600px) {
   .results-container {
     padding: 15px;
@@ -390,6 +634,10 @@ export default {
   .action-btn {
     padding: 15px 25px;
     font-size: 1rem;
+  }
+
+  .debug-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

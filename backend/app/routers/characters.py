@@ -1,7 +1,54 @@
 from fastapi import APIRouter
-from typing import Optional
+from fastapi.responses import FileResponse
+from typing import Optional, List
+from pydantic import BaseModel
+import os
+import math
 
 router = APIRouter()
+
+# Stroke colors for visual distinction
+STROKE_COLORS = [
+    "#FF6B6B",  # Red
+    "#4ECDC4",  # Teal
+    "#FFE66D",  # Yellow
+    "#95E1D3",  # Mint
+    "#F38181",  # Coral
+    "#AA96DA",  # Purple
+]
+
+# Direction to kid-friendly instruction mapping
+DIRECTION_INSTRUCTIONS = {
+    "down": "Start at the top. Draw straight down.",
+    "up": "Start at the bottom. Draw straight up.",
+    "right": "Start on the left. Draw to the right.",
+    "left": "Start on the right. Draw to the left.",
+    "down-left": "Start at the top. Draw down to the left.",
+    "down-right": "Start at the top. Draw down to the right.",
+    "up-left": "Start at the bottom. Draw up to the left.",
+    "up-right": "Start at the bottom. Draw up to the right.",
+    "curve-left": "Start on the right. Curve around to the left.",
+    "curve-right": "Start on the left. Curve around to the right.",
+    "right-curve": "Draw to the right, then curve down.",
+    "down-curve": "Draw down, then curve at the bottom.",
+    "curve-down": "Start with a curve, then go down.",
+    "down-curve-up": "Draw down, curve at the bottom, then back up.",
+    "oval": "Draw a round circle shape.",
+    "s-curve": "Make an S shape, curving back and forth.",
+    "curve-in": "Curve around, then come back in.",
+    "curve-loop": "Curve around in a loop shape.",
+    "curve": "Follow the curving path.",
+    "slant-down": "Draw at an angle going down.",
+    "figure-8": "Draw a figure 8 shape.",
+    "loop-down": "Make a loop, then go down.",
+    "dot": "Make a small dot.",
+    "curve-up": "Curve upward.",
+}
+
+
+class StrokeValidationRequest(BaseModel):
+    stroke_index: int
+    drawn_points: List[List[float]]
 
 # Character data with stroke paths for tracing
 # Paths are SVG-like instructions normalized to 0-100 coordinate space
@@ -14,9 +61,9 @@ CHARACTERS = {
         "phonetic": "ay",
         "sound": "ah as in apple",
         "strokes": [
-            {"points": [[50, 90], [25, 10]], "direction": "up-left"},
-            {"points": [[50, 90], [75, 10]], "direction": "up-right"},
-            {"points": [[35, 50], [65, 50]], "direction": "right"}
+            {"points": [[50, 15], [20, 85]], "direction": "down-left"},
+            {"points": [[50, 15], [80, 85]], "direction": "down-right"},
+            {"points": [[32, 55], [68, 55]], "direction": "right"}
         ]
     },
     "B": {
@@ -629,4 +676,340 @@ async def get_character_strokes(character: str):
     return {
         "character": character,
         "strokes": CHARACTERS[character]["strokes"]
+    }
+
+
+@router.get("/characters/{character}/guides")
+async def get_character_guides(character: str, size: int = 400, font: str = None):
+    """
+    Get auto-generated trace and guide images from the font.
+    These are generated from the actual rendered font for perfect accuracy.
+    Results are cached in the database for fast subsequent requests.
+    """
+    from app.services.guide_cache import get_or_generate_guide
+
+    try:
+        return get_or_generate_guide(character, size, font)
+    except Exception as e:
+        return {"error": f"Failed to generate guides: {str(e)}"}
+
+
+@router.post("/guides/pregenerate")
+async def pregenerate_guides(size: int = 400):
+    """Pre-generate and cache guides for all characters"""
+    from app.services.guide_cache import pregenerate_all_guides
+
+    try:
+        count = pregenerate_all_guides(size)
+        return {"status": "success", "generated": count}
+    except Exception as e:
+        return {"error": f"Failed to pregenerate guides: {str(e)}"}
+
+
+@router.delete("/guides/cache")
+async def clear_guide_cache():
+    """Clear all cached guides (useful when font changes)"""
+    from app.services.guide_cache import clear_cache
+
+    try:
+        clear_cache()
+        return {"status": "success", "message": "Cache cleared"}
+    except Exception as e:
+        return {"error": f"Failed to clear cache: {str(e)}"}
+
+
+@router.get("/guides/stats")
+async def get_guide_cache_stats():
+    """Get statistics about the guide cache"""
+    from app.services.guide_cache import get_cache_stats
+
+    try:
+        return get_cache_stats()
+    except Exception as e:
+        return {"error": f"Failed to get cache stats: {str(e)}"}
+
+
+@router.get("/fonts")
+async def get_fonts():
+    """Get list of available fonts"""
+    from app.services.trace_generator import get_available_fonts
+
+    try:
+        fonts = get_available_fonts()
+        return {"fonts": fonts}
+    except Exception as e:
+        return {"error": f"Failed to get fonts: {str(e)}"}
+
+
+@router.get("/fonts/{font_name}/preview")
+async def get_font_preview(font_name: str, size: int = 600):
+    """Get a preview image showing all characters in the specified font"""
+    from app.services.trace_generator import generate_font_preview
+
+    try:
+        preview = generate_font_preview(font_name, size)
+        return {"font_name": font_name, "preview": preview}
+    except Exception as e:
+        return {"error": f"Failed to generate font preview: {str(e)}"}
+
+
+@router.get("/audio/{character}")
+async def get_character_audio(character: str, voice: str = "rachel"):
+    """
+    Get audio file for character pronunciation.
+    Voice options: 'rachel' (default), 'adam', 'sarah', 'josh', or legacy 'female'/'male'
+    """
+    from app.services.audio_generator import ensure_audio_exists, get_character_data, ELEVENLABS_VOICES, DEFAULT_VOICES
+
+    # Validate character
+    if not get_character_data(character):
+        return {"error": "Character not found"}
+
+    # Map legacy gender values to voice names
+    if voice in DEFAULT_VOICES:
+        voice = DEFAULT_VOICES[voice]
+
+    # Validate voice name
+    if voice not in ELEVENLABS_VOICES:
+        voice = 'rachel'
+
+    try:
+        audio_path = ensure_audio_exists(character, voice)
+        if audio_path and os.path.exists(audio_path):
+            return FileResponse(
+                audio_path,
+                media_type="audio/mpeg",
+                filename=f"{character}_{voice}.mp3"
+            )
+        else:
+            return {"error": "Audio file not available"}
+    except Exception as e:
+        return {"error": f"Failed to get audio: {str(e)}"}
+
+
+@router.get("/audio/{character}/info")
+async def get_character_audio_info(character: str):
+    """Get audio information for a character including available words"""
+    from app.services.audio_generator import get_character_data, get_available_words, get_random_word
+
+    data = get_character_data(character)
+    if not data:
+        return {"error": "Character not found"}
+
+    return {
+        "character": character,
+        "name": data['name'],
+        "type": data['type'],
+        "phonetic": data['phonetic'],
+        "sound": data['sound'],
+        "words": get_available_words(character),
+        "random_word": get_random_word(character)
+    }
+
+
+@router.post("/audio/generate-all")
+async def generate_all_audio_files():
+    """Pre-generate all audio files for both voices"""
+    from app.services.audio_generator import generate_all_audio
+
+    try:
+        female_count = await generate_all_audio('female')
+        male_count = await generate_all_audio('male')
+        return {
+            "status": "success",
+            "generated": {
+                "female": female_count,
+                "male": male_count
+            }
+        }
+    except Exception as e:
+        return {"error": f"Failed to generate audio: {str(e)}"}
+
+
+@router.get("/characters/{character}/guided-strokes")
+async def get_guided_strokes(character: str, size: int = 400):
+    """
+    Get stroke data with enhanced metadata for step-by-step guided instruction.
+    Uses the static stroke definitions which are manually curated for accuracy.
+    """
+    if character not in CHARACTERS:
+        return {"error": "Character not found"}
+
+    char_data = CHARACTERS[character]
+    strokes = char_data["strokes"]
+    scale = size / 100  # Convert from 0-100 to requested size
+    tolerance_radius = size * 0.25  # 25% of canvas size for start/end zones (generous for kids)
+
+    guided_strokes = []
+    for i, stroke in enumerate(strokes):
+        points = stroke["points"]
+        direction = stroke.get("direction", "down")
+
+        # Scale points to requested size
+        scaled_points = [[p[0] * scale, p[1] * scale] for p in points]
+
+        # Get start and end points
+        start_point = scaled_points[0]
+        end_point = scaled_points[-1]
+
+        # Get kid-friendly instruction
+        instruction = DIRECTION_INSTRUCTIONS.get(
+            direction,
+            "Follow the path from the green circle to the arrow."
+        )
+
+        # Assign color (cycle through colors)
+        color = STROKE_COLORS[i % len(STROKE_COLORS)]
+
+        guided_strokes.append({
+            "order": i + 1,
+            "points": scaled_points,
+            "direction": direction,
+            "instruction": instruction,
+            "start_zone": {
+                "x": start_point[0],
+                "y": start_point[1],
+                "radius": tolerance_radius
+            },
+            "end_zone": {
+                "x": end_point[0],
+                "y": end_point[1],
+                "radius": tolerance_radius
+            },
+            "color": color
+        })
+
+    return {
+        "character": character,
+        "total_strokes": len(strokes),
+        "strokes": guided_strokes
+    }
+
+
+@router.post("/characters/{character}/validate-stroke")
+async def validate_stroke(character: str, request: StrokeValidationRequest):
+    """
+    Validate a drawn stroke against the expected stroke path.
+    Returns validation result with kid-friendly feedback.
+    """
+    if character not in CHARACTERS:
+        return {"error": "Character not found"}
+
+    char_data = CHARACTERS[character]
+    strokes = char_data["strokes"]
+
+    if request.stroke_index < 0 or request.stroke_index >= len(strokes):
+        return {"error": "Invalid stroke index"}
+
+    expected_stroke = strokes[request.stroke_index]
+    expected_points = expected_stroke["points"]
+    drawn_points = request.drawn_points
+
+    if len(drawn_points) < 2:
+        return {
+            "valid": False,
+            "started_correctly": False,
+            "ended_correctly": False,
+            "path_accuracy": 0,
+            "feedback": "Try drawing a longer line!"
+        }
+
+    # Use a default size of 400 for validation (points should already be scaled)
+    # We'll work in the coordinate space of the drawn points
+    # Assume drawn points are in canvas coordinates (e.g., 400x400)
+    # and expected points are in 0-100 space
+
+    # Detect the scale from drawn points (approximate canvas size)
+    max_coord = max(max(p[0], p[1]) for p in drawn_points)
+    canvas_size = max(400, max_coord)  # Assume at least 400
+    scale = canvas_size / 100
+
+    scaled_expected = [[p[0] * scale, p[1] * scale] for p in expected_points]
+
+    # Check start point - generous tolerance for kids
+    tolerance = canvas_size * 0.25  # 25% tolerance
+    start_expected = scaled_expected[0]
+    start_drawn = drawn_points[0]
+    start_distance = math.sqrt(
+        (start_drawn[0] - start_expected[0]) ** 2 +
+        (start_drawn[1] - start_expected[1]) ** 2
+    )
+    started_correctly = start_distance <= tolerance
+
+    # Check end point
+    end_expected = scaled_expected[-1]
+    end_drawn = drawn_points[-1]
+    end_distance = math.sqrt(
+        (end_drawn[0] - end_expected[0]) ** 2 +
+        (end_drawn[1] - end_expected[1]) ** 2
+    )
+    ended_correctly = end_distance <= tolerance
+
+    # Calculate path accuracy using average distance from expected path
+    def point_to_segment_distance(px, py, x1, y1, x2, y2):
+        """Calculate distance from point (px, py) to line segment (x1,y1)-(x2,y2)"""
+        dx = x2 - x1
+        dy = y2 - y1
+        if dx == 0 and dy == 0:
+            return math.sqrt((px - x1) ** 2 + (py - y1) ** 2)
+
+        t = max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)))
+        proj_x = x1 + t * dx
+        proj_y = y1 + t * dy
+        return math.sqrt((px - proj_x) ** 2 + (py - proj_y) ** 2)
+
+    def point_to_path_distance(px, py, path_points):
+        """Calculate minimum distance from point to polyline path"""
+        min_dist = float('inf')
+        for i in range(len(path_points) - 1):
+            dist = point_to_segment_distance(
+                px, py,
+                path_points[i][0], path_points[i][1],
+                path_points[i + 1][0], path_points[i + 1][1]
+            )
+            min_dist = min(min_dist, dist)
+        return min_dist
+
+    # Sample drawn points and calculate average distance to expected path
+    total_distance = 0
+    sample_count = min(len(drawn_points), 20)  # Sample up to 20 points
+    step = max(1, len(drawn_points) // sample_count)
+
+    for i in range(0, len(drawn_points), step):
+        point = drawn_points[i]
+        dist = point_to_path_distance(point[0], point[1], scaled_expected)
+        total_distance += dist
+
+    avg_distance = total_distance / (len(drawn_points) // step)
+
+    # Convert distance to accuracy percentage
+    # 0 distance = 100%, tolerance distance = 50%, 2*tolerance = 0%
+    path_accuracy = max(0, min(100, 100 - (avg_distance / tolerance) * 50))
+
+    # Determine if valid (started correctly, ended correctly, and decent path)
+    # Low threshold for kids - focus on start/end positions more than perfect path
+    valid = started_correctly and ended_correctly and path_accuracy >= 25
+
+    # Generate kid-friendly feedback
+    if valid:
+        if path_accuracy >= 80:
+            feedback = "Perfect! Great job!"
+        elif path_accuracy >= 60:
+            feedback = "Good work! Keep practicing!"
+        else:
+            feedback = "Nice try! You got it!"
+    else:
+        if not started_correctly:
+            feedback = "Start at the green circle!"
+        elif not ended_correctly:
+            feedback = "Try to reach the arrow at the end!"
+        else:
+            feedback = "Follow the dotted line more closely!"
+
+    return {
+        "valid": valid,
+        "started_correctly": started_correctly,
+        "ended_correctly": ended_correctly,
+        "path_accuracy": round(path_accuracy, 1),
+        "feedback": feedback
     }
