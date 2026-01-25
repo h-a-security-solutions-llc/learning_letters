@@ -635,17 +635,16 @@ export default {
     }
 
     const goBack = async () => {
-      if (currentView.value === 'results') {
-        currentView.value = 'drawing'
-        attempts.value = []
-        currentAttempt.value = 1
-      } else {
-        currentView.value = 'selection'
-        selectedCharacter.value = null
-        // Refresh progress when returning to selection
-        if (isAuthenticated.value) {
-          await fetchProgress()
-        }
+      // Always go back to character selection (Try Again handles returning to drawing)
+      currentView.value = 'selection'
+      selectedCharacter.value = null
+      scoreData.value = null
+      userDrawing.value = null
+      attempts.value = []
+      currentAttempt.value = 1
+      // Refresh progress when returning to selection
+      if (isAuthenticated.value) {
+        await fetchProgress()
       }
     }
 
