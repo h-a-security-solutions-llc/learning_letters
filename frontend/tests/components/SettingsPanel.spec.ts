@@ -35,7 +35,13 @@ describe('SettingsPanel', () => {
     voiceGender: 'rachel',
     autoPlaySound: true,
     rememberMultiplayerPlayers: true,
-    highContrastMode: false
+    highContrastMode: false,
+    uiScale: 100,
+    reducedMotion: null,
+    audioSpeed: 1.0,
+    strokeTolerance: 0.5,
+    colorBlindMode: false,
+    enableCaptions: false
   }
 
   let wrapper: VueWrapper

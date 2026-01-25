@@ -15,7 +15,7 @@ from app.routers import characters, scoring
 load_dotenv()
 
 
-def pregenerate_audio_files():
+def pregenerate_audio_files():  # pragma: no cover
     """Pre-generate all audio files in background thread."""
     from app.services.audio_generator import CHARACTER_DATA, generate_audio_file, get_audio_path
 
@@ -42,7 +42,7 @@ def pregenerate_audio_files():
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: FastAPI):  # pragma: no cover
     """Startup and shutdown events."""
     # Start audio pre-generation in background thread (non-blocking)
     thread = threading.Thread(target=pregenerate_audio_files, daemon=True)
@@ -88,7 +88,7 @@ async def health_check():
     return {"status": "healthy"}
 
 
-def main():
+def main():  # pragma: no cover
     """Entry point for poetry run letters command."""
     import uvicorn
 

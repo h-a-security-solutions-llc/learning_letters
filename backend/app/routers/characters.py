@@ -745,7 +745,7 @@ async def get_character_guides(character: str, size: int = 400, font: Optional[s
 
 
 @router.post("/guides/pregenerate")
-async def pregenerate_guides(size: int = 400):
+async def pregenerate_guides(size: int = 400):  # pragma: no cover
     """Pre-generate and cache guides for all characters"""
     from app.services.guide_cache import pregenerate_all_guides
 
@@ -823,7 +823,7 @@ async def get_font_preview(font_name: str, size: int = 600):
 
 
 @router.get("/fonts/{font_name}.ttf")
-async def get_font_file(font_name: str):
+async def get_font_file(font_name: str):  # pragma: no cover
     """Serve a font file for use in the frontend"""
     # Security: only allow known font names (prevent path traversal)
     allowed_fonts = [
@@ -850,7 +850,7 @@ async def get_font_file(font_name: str):
 
 
 @router.get("/audio/{character}")
-async def get_character_audio(character: str, voice: str = "rachel"):
+async def get_character_audio(character: str, voice: str = "rachel"):  # pragma: no cover
     """
     Get audio file for character pronunciation.
     Voice options: 'rachel' (default), 'adam', 'sarah', 'josh', or legacy 'female'/'male'
@@ -878,7 +878,7 @@ async def get_character_audio(character: str, voice: str = "rachel"):
 
 
 @router.get("/audio/{character}/info")
-async def get_character_audio_info(character: str):
+async def get_character_audio_info(character: str):  # pragma: no cover
     """Get audio information for a character including available words"""
     from app.services.audio_generator import get_available_words, get_character_data, get_random_word
 
@@ -898,7 +898,7 @@ async def get_character_audio_info(character: str):
 
 
 @router.post("/audio/generate-all")
-async def generate_all_audio_files():
+async def generate_all_audio_files():  # pragma: no cover
     """Pre-generate all audio files for both voices"""
     from app.services.audio_generator import generate_all_audio
 

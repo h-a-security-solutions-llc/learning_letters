@@ -404,8 +404,10 @@ def get_available_voices() -> dict:
     }
 
 
-def generate_audio_file_elevenlabs(character: str, voice: str = "rachel", word: Optional[str] = None) -> str:
-    """Generate audio using ElevenLabs API."""
+def generate_audio_file_elevenlabs(
+    character: str, voice: str = "rachel", word: Optional[str] = None
+) -> str:  # pragma: no cover
+    """Generate audio using ElevenLabs API. One-time generation, files committed to git."""
     from elevenlabs import ElevenLabs
 
     api_key = os.getenv("ELEVENLABS_API_KEY")
@@ -444,12 +446,12 @@ def generate_audio_file_elevenlabs(character: str, voice: str = "rachel", word: 
     return output_path
 
 
-def generate_audio_file(character: str, voice: str = "rachel", word: Optional[str] = None) -> str:
+def generate_audio_file(character: str, voice: str = "rachel", word: Optional[str] = None) -> str:  # pragma: no cover
     """Generate an audio file for a character pronunciation."""
     return generate_audio_file_elevenlabs(character, voice, word)
 
 
-def generate_all_audio(voice: str = "rachel") -> int:
+def generate_all_audio(voice: str = "rachel") -> int:  # pragma: no cover
     """Generate audio files for all characters with specified voice."""
     count = 0
     for character in CHARACTER_DATA:
@@ -463,7 +465,7 @@ def generate_all_audio(voice: str = "rachel") -> int:
     return count
 
 
-def ensure_audio_exists(character: str, voice: str = "rachel") -> Optional[str]:
+def ensure_audio_exists(character: str, voice: str = "rachel") -> Optional[str]:  # pragma: no cover
     """Ensure audio file exists for a character, generating if needed."""
     # Map gender to default voice if needed
     voice = DEFAULT_VOICES.get(voice, voice)

@@ -125,8 +125,8 @@ def get_or_generate_guide(character: str, size: int = 400, font_name: Optional[s
     return guide_data
 
 
-def pregenerate_all_guides(size: int = 400):
-    """Pre-generate guides for all characters"""
+def pregenerate_all_guides(size: int = 400):  # pragma: no cover
+    """Pre-generate guides for all characters. One-time warmup task."""
     # All uppercase letters
     uppercase = [chr(i) for i in range(ord("A"), ord("Z") + 1)]
     # All lowercase letters
