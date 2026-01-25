@@ -127,7 +127,7 @@ export function useSync() {
    * Push local settings to server
    * Called after any setting change when authenticated
    */
-  async function pushSettings(settings: AppSettings): Promise<boolean> {
+  async function pushSettings(settings: AppSettings, retryCount = 0): Promise<boolean> {
     if (!isAuthenticated.value) {
       return false
     }
@@ -142,10 +142,12 @@ export function useSync() {
       return true
     } catch (e: unknown) {
       const error = e as { response?: { status?: number } }
-      if (error.response?.status === 409) {
-        // Conflict - refetch and retry
-        syncError.value = 'Settings conflict - refreshing'
+      if (error.response?.status === 409 && retryCount < 3) {
+        // Conflict - refetch latest version and retry
+        syncError.value = 'Settings conflict - retrying'
         await fetchSettings()
+        isSyncing.value = false
+        return pushSettings(settings, retryCount + 1)
       } else {
         console.error('Failed to push settings to server:', e)
         syncError.value = 'Failed to save settings'
