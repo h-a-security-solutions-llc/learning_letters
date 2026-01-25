@@ -17,8 +17,7 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS character_guides (
             character TEXT,
             size INTEGER,
@@ -29,8 +28,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (character, size, font_name)
         )
-    """
-    )
+    """)
 
     conn.commit()
     conn.close()

@@ -1089,3 +1089,86 @@ async def validate_stroke(character: str, request: StrokeValidationRequest):
         "path_accuracy": round(path_accuracy, 1),
         "feedback": feedback,
     }
+
+
+# Word Images Endpoints
+
+
+@router.get("/words/images/stats")
+async def get_word_image_stats():
+    """Get statistics about available word images."""
+    from app.services.word_images import get_available_word_images
+
+    return get_available_word_images()
+
+
+@router.get("/words/{word}/image")
+async def get_word_image(word: str, high_contrast: bool = False):
+    """Get image for a word. Returns the image file if available."""
+    from app.services.word_images import get_word_image_path
+
+    path = get_word_image_path(word, high_contrast)
+    if path and os.path.exists(path):
+        media_type = "image/svg+xml" if path.endswith(".svg") else "image/png"
+        return FileResponse(path, media_type=media_type)
+
+    return {"error": "Image not found", "word": word, "high_contrast": high_contrast}
+
+
+@router.get("/words/{word}/image-url")
+async def get_word_image_url_endpoint(word: str, high_contrast: bool = False):
+    """Get URL for a word's image."""
+    from app.services.word_images import get_word_image_url
+
+    url = get_word_image_url(word, high_contrast)
+    if url:
+        return {"word": word, "high_contrast": high_contrast, "url": url}
+
+    return {"error": "Image not found", "word": word, "high_contrast": high_contrast}
+
+
+@router.get("/characters/{character}/word-image")
+async def get_character_word_image(character: str, high_contrast: bool = False):
+    """Get a random word and its image for a character."""
+    from app.services.audio_generator import get_character_data, get_random_word
+    from app.services.word_images import get_word_image_url
+
+    char_data = get_character_data(character)
+    if not char_data:
+        return {"error": "Character not found"}
+
+    word = get_random_word(character)
+    image_url = get_word_image_url(word, high_contrast)
+
+    return {
+        "character": character,
+        "word": word,
+        "image_url": image_url,
+        "high_contrast": high_contrast,
+        "sound": char_data.get("sound"),
+        "name": char_data.get("name"),
+    }
+
+
+@router.get("/characters/{character}/all-word-images")
+async def get_all_character_word_images(character: str, high_contrast: bool = False):
+    """Get all words and their images for a character."""
+    from app.services.audio_generator import get_character_data
+    from app.services.word_images import get_word_image_url
+
+    char_data = get_character_data(character)
+    if not char_data:
+        return {"error": "Character not found"}
+
+    words_with_images = []
+    for word in char_data.get("words", []):
+        image_url = get_word_image_url(word, high_contrast)
+        words_with_images.append({"word": word, "image_url": image_url, "has_image": image_url is not None})
+
+    return {
+        "character": character,
+        "words": words_with_images,
+        "high_contrast": high_contrast,
+        "sound": char_data.get("sound"),
+        "name": char_data.get("name"),
+    }

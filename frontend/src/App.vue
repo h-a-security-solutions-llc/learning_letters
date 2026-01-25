@@ -11,7 +11,12 @@
         <span class="title-letter" style="color: #4ECDC4;">2</span>
         <span class="title-letter" style="color: #FFE66D;">3</span>
       </h1>
-      <button v-if="currentView !== 'selection'" class="back-button" aria-label="Go back" @click="handleBackClick">
+      <button
+        v-if="currentView !== 'selection'"
+        class="back-button"
+        aria-label="Go back"
+        @click="handleBackClick"
+      >
         <span class="back-arrow" aria-hidden="true">←</span> Back
       </button>
       <div class="header-buttons">
@@ -50,6 +55,8 @@
             <span class="mode-icon" aria-hidden="true">👥</span>
           </button>
         </div>
+        <!-- User Menu (when logged in) or Settings Button -->
+        <UserMenu v-if="isAuthenticated" @logout="() => {}" />
         <button class="settings-button" aria-label="Open settings" @click="showSettings = true">
           <span class="settings-icon" aria-hidden="true">⚙️</span>
         </button>
@@ -62,6 +69,15 @@
       :settings="settings"
       @close="showSettings = false"
       @update:settings="settings = $event"
+      @show-auth="openAuthModal"
+    />
+
+    <!-- Auth Modal -->
+    <AuthModal
+      v-if="showAuthModal"
+      :initial-mode="authModalMode"
+      @close="showAuthModal = false"
+      @success="onAuthSuccess"
     />
 
     <!-- Multiplayer Setup Wizard -->
@@ -96,6 +112,7 @@
       <CharacterSelection
         v-if="currentView === 'selection'"
         :selected-font="settings.selectedFont"
+        :progress="userProgress"
         @select-character="onSelectCharacter"
       />
 
@@ -124,6 +141,8 @@
         :color-blind-mode="settings.colorBlindMode"
         :audio-speed="settings.audioSpeed"
         :enable-captions="settings.enableCaptions"
+        :high-score-for-mode="highScoreForMode"
+        :is-multiplayer="isMultiplayerMode"
         @submit="onSubmitDrawing"
         @toggle-dash-tracing="toggleDashTracing"
         @toggle-best-of-3="toggleBestOf3"
@@ -185,7 +204,12 @@ import SettingsPanel from './components/SettingsPanel.vue'
 import MultiplayerSetupWizard from './components/MultiplayerSetupWizard.vue'
 import MultiplayerResultsDisplay from './components/MultiplayerResultsDisplay.vue'
 import AudioCaption from './components/AudioCaption.vue'
+import AuthModal from './components/AuthModal.vue'
+import UserMenu from './components/UserMenu.vue'
 import { useAudioCaptions } from './composables/useAudioCaptions'
+import { useAuth } from './composables/useAuth'
+import { useSync } from './composables/useSync'
+import { progressApi } from './services/api'
 
 const SETTINGS_KEY = 'learning_letters_settings'
 const MULTIPLAYER_PLAYERS_KEY = 'learning_letters_multiplayer_players'
@@ -220,7 +244,9 @@ export default {
     SettingsPanel,
     MultiplayerSetupWizard,
     MultiplayerResultsDisplay,
-    AudioCaption
+    AudioCaption,
+    AuthModal,
+    UserMenu
   },
   setup() {
     const currentView = ref('selection')
@@ -256,6 +282,17 @@ export default {
     const roundsPlayed = ref(0)  // Number of completed rounds
     const playerWins = ref([])  // Wins per player index [0, 1, 2, ...]
 
+    // Auth state
+    const { user, isAuthenticated, initAuth } = useAuth()
+    const showAuthModal = ref(false)
+    const authModalMode = ref('login')
+
+    // Sync state
+    const { mergeOnLogin, pushSettings, pushMultiplayerPlayers, syncMultiplayerPlayersOnLogin } = useSync()
+
+    // Progress tracking
+    const userProgress = ref([])
+
     // Computed properties for multiplayer
     const currentPlayer = computed(() =>
       isMultiplayerMode.value ? players.value[currentPlayerIndex.value] : null
@@ -268,6 +305,26 @@ export default {
     const effectiveShowStepByStepButton = computed(() =>
       currentPlayer.value?.stepByStepAllowed ?? settings.value.enableStepByStep
     )
+
+    // Compute current drawing mode based on mode toggles
+    const currentDrawingMode = computed(() => {
+      if (guidedMode.value) return 'step-by-step'
+      if (dashTracingMode.value) return 'tracing'
+      return 'freestyle'
+    })
+
+    // Compute high score for the current character/font/mode
+    const highScoreForMode = computed(() => {
+      if (!isAuthenticated.value || !selectedCharacter.value) return null
+
+      const progress = userProgress.value.find(p =>
+        p.character === selectedCharacter.value &&
+        p.font_name === settings.value.selectedFont &&
+        p.mode === currentDrawingMode.value
+      )
+
+      return progress?.high_score ?? null
+    })
 
     // Load settings from localStorage
     const loadSettings = () => {
@@ -282,10 +339,14 @@ export default {
       }
     }
 
-    // Save settings to localStorage
-    const saveSettings = () => {
+    // Save settings to localStorage and sync to server if authenticated
+    const saveSettings = async () => {
       try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings.value))
+        // Sync to server if authenticated
+        if (isAuthenticated.value) {
+          await pushSettings(settings.value)
+        }
       } catch (e) {
         console.error('Failed to save settings:', e)
       }
@@ -335,25 +396,72 @@ export default {
       }
     }
 
-    const saveMultiplayerPlayers = (playerList) => {
+    const saveMultiplayerPlayers = async (playerList) => {
       if (!settings.value.rememberMultiplayerPlayers) return
       try {
         localStorage.setItem(MULTIPLAYER_PLAYERS_KEY, JSON.stringify(playerList))
         savedMultiplayerPlayers.value = playerList
+        // Sync to server if authenticated
+        if (isAuthenticated.value) {
+          await pushMultiplayerPlayers(playerList)
+        }
       } catch (e) {
         console.error('Failed to save multiplayer players:', e)
       }
     }
 
     // Load settings on mount
-    onMounted(() => {
+    onMounted(async () => {
       loadSettings()
       loadMultiplayerPlayers()
       // Apply high contrast mode if enabled
       if (settings.value.highContrastMode) {
         document.body.classList.add('high-contrast')
       }
+      // Initialize auth (try to restore session)
+      await initAuth()
+      // Fetch progress if authenticated
+      if (isAuthenticated.value) {
+        await fetchProgress()
+      }
     })
+
+    // Show auth modal from settings panel
+    const openAuthModal = (mode) => {
+      authModalMode.value = mode
+      showAuthModal.value = true
+      showSettings.value = false  // Close settings when opening auth
+    }
+
+    // Fetch user progress from server
+    const fetchProgress = async () => {
+      if (!isAuthenticated.value) {
+        userProgress.value = []
+        return
+      }
+      try {
+        const response = await progressApi.getAll()
+        userProgress.value = response.progress || []
+      } catch (e) {
+        console.error('Failed to fetch progress:', e)
+        userProgress.value = []
+      }
+    }
+
+    const onAuthSuccess = async () => {
+      showAuthModal.value = false
+      // Sync settings and multiplayer players after login
+      const mergedSettings = await mergeOnLogin()
+      if (mergedSettings) {
+        settings.value = mergedSettings
+      }
+      const syncedPlayers = await syncMultiplayerPlayersOnLogin()
+      if (syncedPlayers && syncedPlayers.length > 0) {
+        savedMultiplayerPlayers.value = syncedPlayers
+      }
+      // Fetch progress
+      await fetchProgress()
+    }
 
     // Audio captions
     const { currentCaption, isVisible: captionVisible, showCaption, hideCaptionAfterDelay } = useAudioCaptions()
@@ -393,7 +501,42 @@ export default {
       }
     }
 
+    // Update local progress cache when a new high score is achieved
+    const updateLocalProgress = (scoreResult) => {
+      if (!isAuthenticated.value || !scoreResult.is_new_high_score) return
+
+      const mode = currentDrawingMode.value
+      const existingIndex = userProgress.value.findIndex(p =>
+        p.character === selectedCharacter.value &&
+        p.font_name === settings.value.selectedFont &&
+        p.mode === mode
+      )
+
+      if (existingIndex >= 0) {
+        // Update existing entry
+        userProgress.value[existingIndex].high_score = scoreResult.high_score_for_mode
+        userProgress.value[existingIndex].stars = scoreResult.stars
+      } else {
+        // Add new entry (server will have created it)
+        userProgress.value.push({
+          id: '',  // Will be set on next fetch
+          character: selectedCharacter.value,
+          font_name: settings.value.selectedFont,
+          mode: mode,
+          high_score: scoreResult.high_score_for_mode,
+          stars: scoreResult.stars,
+          attempts_count: 1,
+          best_attempt_at: new Date().toISOString()
+        })
+      }
+    }
+
     const onSubmitDrawing = async (drawingData) => {
+      // Update local progress cache if user achieved a new high score
+      if (!isMultiplayerMode.value) {
+        updateLocalProgress(drawingData.scoreResult)
+      }
+
       if (isMultiplayerMode.value) {
         // Store result for current player
         playerResults.value.push({
@@ -491,7 +634,7 @@ export default {
       }
     }
 
-    const goBack = () => {
+    const goBack = async () => {
       if (currentView.value === 'results') {
         currentView.value = 'drawing'
         attempts.value = []
@@ -499,6 +642,10 @@ export default {
       } else {
         currentView.value = 'selection'
         selectedCharacter.value = null
+        // Refresh progress when returning to selection
+        if (isAuthenticated.value) {
+          await fetchProgress()
+        }
       }
     }
 
@@ -683,7 +830,19 @@ export default {
       playerWins,
       // Audio captions
       currentCaption,
-      captionVisible
+      captionVisible,
+      // Auth
+      user,
+      isAuthenticated,
+      showAuthModal,
+      authModalMode,
+      openAuthModal,
+      onAuthSuccess,
+      // Progress
+      userProgress,
+      fetchProgress,
+      currentDrawingMode,
+      highScoreForMode
     }
   }
 }

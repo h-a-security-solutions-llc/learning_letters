@@ -4,24 +4,38 @@ import SettingsPanel from '@/components/SettingsPanel.vue'
 import type { AppSettings } from '@/types'
 
 // Mock axios
-vi.mock('axios', () => ({
-  default: {
-    get: vi.fn().mockResolvedValue({
-      data: {
-        fonts: ['Fredoka-Regular', 'Test-Font'],
-        fonts_detailed: [
-          {
-            name: 'Fredoka-Regular',
-            display_name: 'Fredoka',
-            style: 'Rounded Playful',
-            description: 'Test description',
-            characteristics: ['rounded']
-          }
-        ]
-      }
-    })
+vi.mock('axios', () => {
+  const mockAxiosInstance = {
+    get: vi.fn().mockResolvedValue({ data: {} }),
+    post: vi.fn().mockResolvedValue({ data: {} }),
+    put: vi.fn().mockResolvedValue({ data: {} }),
+    delete: vi.fn().mockResolvedValue({ data: {} }),
+    interceptors: {
+      request: { use: vi.fn() },
+      response: { use: vi.fn() }
+    }
   }
-}))
+  return {
+    default: {
+      create: vi.fn(() => mockAxiosInstance),
+      get: vi.fn().mockResolvedValue({
+        data: {
+          fonts: ['Fredoka-Regular', 'Test-Font'],
+          fonts_detailed: [
+            {
+              name: 'Fredoka-Regular',
+              display_name: 'Fredoka',
+              style: 'Rounded Playful',
+              description: 'Test description',
+              characteristics: ['rounded']
+            }
+          ]
+        }
+      }),
+      post: vi.fn().mockResolvedValue({ data: {} })
+    }
+  }
+})
 
 describe('SettingsPanel', () => {
   const defaultSettings: AppSettings = {

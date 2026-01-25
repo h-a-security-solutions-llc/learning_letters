@@ -9,7 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import characters, scoring
+from app.core.database import create_tables
+from app.routers import auth, characters, progress, scoring, user_settings
 
 # Load environment variables
 load_dotenv()
@@ -44,6 +45,9 @@ def pregenerate_audio_files():  # pragma: no cover
 @asynccontextmanager
 async def lifespan(_app: FastAPI):  # pragma: no cover
     """Startup and shutdown events."""
+    # Create database tables on startup
+    await create_tables()
+
     # Start audio pre-generation in background thread (non-blocking)
     thread = threading.Thread(target=pregenerate_audio_files, daemon=True)
     thread.start()
@@ -59,9 +63,11 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
+# In production, replace with specific origins for security
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS if CORS_ORIGINS != ["*"] else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,6 +78,9 @@ static_path = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 # Include routers
+app.include_router(auth.router, prefix="/api", tags=["auth"])
+app.include_router(user_settings.router, prefix="/api", tags=["user"])
+app.include_router(progress.router, prefix="/api", tags=["progress"])
 app.include_router(scoring.router, prefix="/api", tags=["scoring"])
 app.include_router(characters.router, prefix="/api", tags=["characters"])
 

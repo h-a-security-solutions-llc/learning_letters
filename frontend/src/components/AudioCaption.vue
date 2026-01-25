@@ -1,6 +1,11 @@
 <template>
   <Transition name="caption-fade">
-    <div v-if="isVisible && caption" class="audio-caption-toast" role="status" aria-live="polite">
+    <div
+      v-if="isVisible && caption"
+      class="audio-caption-toast"
+      role="status"
+      aria-live="polite"
+    >
       <span class="caption-icon">🔊</span>
       <span class="caption-character">{{ caption.text }}</span>
       <span class="caption-phonetic">"{{ caption.phonetic }}"</span>

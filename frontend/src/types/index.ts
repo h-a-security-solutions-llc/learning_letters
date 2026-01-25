@@ -44,7 +44,13 @@ export interface ScoreResult {
     drawn_sanded: string
     reference_normalized: string
   }
+  is_new_high_score?: boolean
+  previous_high_score?: number
+  high_score_for_mode?: number
 }
+
+// Drawing mode for progress tracking
+export type DrawingMode = 'freestyle' | 'tracing' | 'step-by-step'
 
 // Player result for multiplayer
 export interface PlayerResult {
@@ -109,3 +115,51 @@ export type AppView = 'selection' | 'drawing' | 'results' | 'multiplayer-results
 
 // Character category
 export type CharacterCategory = 'uppercase' | 'lowercase' | 'numbers'
+
+// Authentication types
+export interface User {
+  id: string
+  email: string
+  display_name: string
+  created_at: string
+}
+
+export interface AuthState {
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
+}
+
+export interface TokenResponse {
+  access_token: string
+  token_type: string
+  user: User
+}
+
+export interface LoginCredentials {
+  email: string
+  password: string
+}
+
+export interface RegisterData {
+  email: string
+  password: string
+  display_name: string
+}
+
+// Synced settings (with version for conflict resolution)
+export interface SyncedSettings extends AppSettings {
+  version?: number
+}
+
+// User progress for high scores
+export interface UserProgress {
+  id: string
+  character: string
+  font_name: string
+  mode: DrawingMode
+  high_score: number
+  stars: number
+  attempts_count: number
+  best_attempt_at: string
+}

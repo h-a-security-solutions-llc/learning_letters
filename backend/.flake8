@@ -10,6 +10,6 @@ exclude =
     .eggs,
     .mypy_cache,
     .pytest_cache
-extend-ignore = E203, E501, W503
+extend-ignore = E203, E501, W503, B008
 per-file-ignores =
     __init__.py:F401

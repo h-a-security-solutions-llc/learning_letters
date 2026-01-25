@@ -1,17 +1,63 @@
 <template>
-  <div class="settings-overlay" role="dialog" aria-labelledby="settings-title" @click.self="$emit('close')">
+  <div
+    class="settings-overlay"
+    role="dialog"
+    aria-labelledby="settings-title"
+    @click.self="$emit('close')"
+  >
     <div class="settings-panel" role="document">
       <div class="settings-header">
-        <h2 id="settings-title">Settings</h2>
+        <h2 id="settings-title">
+          Settings
+        </h2>
         <button class="close-button" aria-label="Close settings" @click="$emit('close')">
           <span aria-hidden="true">×</span>
         </button>
       </div>
 
       <div class="settings-content">
+        <!-- Account Section -->
+        <div class="setting-section">
+          <h3 class="setting-section-title">
+            Account
+          </h3>
+
+          <div v-if="isAuthenticated" class="account-info">
+            <div class="account-user">
+              <span class="account-avatar">{{ user?.display_name?.charAt(0).toUpperCase() }}</span>
+              <div class="account-details">
+                <span class="account-name">{{ user?.display_name }}</span>
+                <span class="account-email">{{ user?.email }}</span>
+              </div>
+            </div>
+            <p class="account-status">
+              Your settings and progress are synced to your account
+            </p>
+            <button class="logout-button" @click="handleLogout">
+              Sign Out
+            </button>
+          </div>
+
+          <div v-else class="account-guest">
+            <p class="guest-message">
+              Sign in to sync your settings and progress across devices
+            </p>
+            <div class="auth-buttons">
+              <button class="auth-button primary" @click="showAuthModal('login')">
+                Sign In
+              </button>
+              <button class="auth-button secondary" @click="showAuthModal('register')">
+                Create Account
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Accessibility Section -->
         <div class="setting-section">
-          <h3 class="setting-section-title">Accessibility</h3>
+          <h3 class="setting-section-title">
+            Accessibility
+          </h3>
 
           <!-- High Contrast Mode -->
           <div class="setting-item">
@@ -241,214 +287,216 @@
         </div>
 
         <div class="setting-section">
-          <h3 class="setting-section-title">Game Options</h3>
+          <h3 class="setting-section-title">
+            Game Options
+          </h3>
 
-        <!-- Best of 3 Mode -->
-        <div class="setting-item">
-          <label class="setting-toggle">
-            <input
-              type="checkbox"
-              :checked="localSettings.enableBestOf3"
-              @change="updateSetting('enableBestOf3', $event.target.checked)"
-            >
-            <span class="toggle-slider" />
-            <span class="setting-label">Enable Best of 3 Mode</span>
-          </label>
-        </div>
-
-        <!-- Trace Mode -->
-        <div class="setting-item">
-          <label class="setting-toggle">
-            <input
-              type="checkbox"
-              :checked="localSettings.enableTraceMode"
-              @change="updateSetting('enableTraceMode', $event.target.checked)"
-            >
-            <span class="toggle-slider" />
-            <span class="setting-label">Enable Trace Mode</span>
-          </label>
-          <div v-if="localSettings.enableTraceMode" class="nested-setting">
+          <!-- Best of 3 Mode -->
+          <div class="setting-item">
             <label class="setting-toggle">
               <input
                 type="checkbox"
-                :checked="localSettings.traceModeDefault"
-                @change="updateSetting('traceModeDefault', $event.target.checked)"
+                :checked="localSettings.enableBestOf3"
+                @change="updateSetting('enableBestOf3', $event.target.checked)"
               >
               <span class="toggle-slider" />
-              <span class="setting-label">Trace on by default</span>
+              <span class="setting-label">Enable Best of 3 Mode</span>
             </label>
           </div>
-        </div>
 
-        <!-- Step-by-Step Mode -->
-        <div class="setting-item">
-          <label class="setting-toggle">
-            <input
-              type="checkbox"
-              :checked="localSettings.enableStepByStep"
-              @change="updateSetting('enableStepByStep', $event.target.checked)"
-            >
-            <span class="toggle-slider" />
-            <span class="setting-label">Enable Step-by-Step Mode</span>
-          </label>
-          <p class="setting-description">
-            Practice drawing each stroke one at a time with visual guides
-          </p>
-          <div v-if="localSettings.enableStepByStep" class="nested-setting">
+          <!-- Trace Mode -->
+          <div class="setting-item">
             <label class="setting-toggle">
               <input
                 type="checkbox"
-                :checked="localSettings.stepByStepDefault"
-                @change="updateSetting('stepByStepDefault', $event.target.checked)"
+                :checked="localSettings.enableTraceMode"
+                @change="updateSetting('enableTraceMode', $event.target.checked)"
               >
               <span class="toggle-slider" />
-              <span class="setting-label">Step-by-Step on by default</span>
+              <span class="setting-label">Enable Trace Mode</span>
+            </label>
+            <div v-if="localSettings.enableTraceMode" class="nested-setting">
+              <label class="setting-toggle">
+                <input
+                  type="checkbox"
+                  :checked="localSettings.traceModeDefault"
+                  @change="updateSetting('traceModeDefault', $event.target.checked)"
+                >
+                <span class="toggle-slider" />
+                <span class="setting-label">Trace on by default</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Step-by-Step Mode -->
+          <div class="setting-item">
+            <label class="setting-toggle">
+              <input
+                type="checkbox"
+                :checked="localSettings.enableStepByStep"
+                @change="updateSetting('enableStepByStep', $event.target.checked)"
+              >
+              <span class="toggle-slider" />
+              <span class="setting-label">Enable Step-by-Step Mode</span>
+            </label>
+            <p class="setting-description">
+              Practice drawing each stroke one at a time with visual guides
+            </p>
+            <div v-if="localSettings.enableStepByStep" class="nested-setting">
+              <label class="setting-toggle">
+                <input
+                  type="checkbox"
+                  :checked="localSettings.stepByStepDefault"
+                  @change="updateSetting('stepByStepDefault', $event.target.checked)"
+                >
+                <span class="toggle-slider" />
+                <span class="setting-label">Step-by-Step on by default</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Multiplayer Settings -->
+          <div class="setting-item">
+            <label class="setting-toggle">
+              <input
+                type="checkbox"
+                :checked="localSettings.rememberMultiplayerPlayers"
+                @change="updateSetting('rememberMultiplayerPlayers', $event.target.checked)"
+              >
+              <span class="toggle-slider" />
+              <span class="setting-label">Remember multiplayer players</span>
+            </label>
+            <p class="setting-description">
+              Save player names and settings for next time
+            </p>
+          </div>
+
+          <!-- Audio Settings -->
+          <div class="setting-item">
+            <label class="setting-toggle">
+              <input
+                type="checkbox"
+                :checked="localSettings.autoPlaySound"
+                @change="updateSetting('autoPlaySound', $event.target.checked)"
+              >
+              <span class="toggle-slider" />
+              <span class="setting-label">Auto-play pronunciation</span>
             </label>
           </div>
-        </div>
 
-        <!-- Multiplayer Settings -->
-        <div class="setting-item">
-          <label class="setting-toggle">
-            <input
-              type="checkbox"
-              :checked="localSettings.rememberMultiplayerPlayers"
-              @change="updateSetting('rememberMultiplayerPlayers', $event.target.checked)"
-            >
-            <span class="toggle-slider" />
-            <span class="setting-label">Remember multiplayer players</span>
-          </label>
-          <p class="setting-description">
-            Save player names and settings for next time
-          </p>
-        </div>
-
-        <!-- Audio Settings -->
-        <div class="setting-item">
-          <label class="setting-toggle">
-            <input
-              type="checkbox"
-              :checked="localSettings.autoPlaySound"
-              @change="updateSetting('autoPlaySound', $event.target.checked)"
-            >
-            <span class="toggle-slider" />
-            <span class="setting-label">Auto-play pronunciation</span>
-          </label>
-        </div>
-
-        <!-- Voice Selection -->
-        <div class="setting-item">
-          <label class="setting-label-standalone">Voice</label>
-          <div class="voice-options">
-            <label class="voice-option" :class="{ active: localSettings.voiceGender === 'rachel' }">
-              <input
-                type="radio"
-                name="voiceGender"
-                value="rachel"
-                :checked="localSettings.voiceGender === 'rachel'"
-                @change="updateSetting('voiceGender', 'rachel')"
-              >
-              <span class="voice-icon">👩</span>
-              <span class="voice-name">Rachel</span>
-              <span class="voice-desc">Calm</span>
-            </label>
-            <label class="voice-option" :class="{ active: localSettings.voiceGender === 'sarah' }">
-              <input
-                type="radio"
-                name="voiceGender"
-                value="sarah"
-                :checked="localSettings.voiceGender === 'sarah'"
-                @change="updateSetting('voiceGender', 'sarah')"
-              >
-              <span class="voice-icon">👩</span>
-              <span class="voice-name">Sarah</span>
-              <span class="voice-desc">Friendly</span>
-            </label>
-            <label class="voice-option" :class="{ active: localSettings.voiceGender === 'adam' }">
-              <input
-                type="radio"
-                name="voiceGender"
-                value="adam"
-                :checked="localSettings.voiceGender === 'adam'"
-                @change="updateSetting('voiceGender', 'adam')"
-              >
-              <span class="voice-icon">👨</span>
-              <span class="voice-name">Adam</span>
-              <span class="voice-desc">Deep</span>
-            </label>
-            <label class="voice-option" :class="{ active: localSettings.voiceGender === 'josh' }">
-              <input
-                type="radio"
-                name="voiceGender"
-                value="josh"
-                :checked="localSettings.voiceGender === 'josh'"
-                @change="updateSetting('voiceGender', 'josh')"
-              >
-              <span class="voice-icon">👨</span>
-              <span class="voice-name">Josh</span>
-              <span class="voice-desc">Young</span>
-            </label>
+          <!-- Voice Selection -->
+          <div class="setting-item">
+            <label class="setting-label-standalone">Voice</label>
+            <div class="voice-options">
+              <label class="voice-option" :class="{ active: localSettings.voiceGender === 'rachel' }">
+                <input
+                  type="radio"
+                  name="voiceGender"
+                  value="rachel"
+                  :checked="localSettings.voiceGender === 'rachel'"
+                  @change="updateSetting('voiceGender', 'rachel')"
+                >
+                <span class="voice-icon">👩</span>
+                <span class="voice-name">Rachel</span>
+                <span class="voice-desc">Calm</span>
+              </label>
+              <label class="voice-option" :class="{ active: localSettings.voiceGender === 'sarah' }">
+                <input
+                  type="radio"
+                  name="voiceGender"
+                  value="sarah"
+                  :checked="localSettings.voiceGender === 'sarah'"
+                  @change="updateSetting('voiceGender', 'sarah')"
+                >
+                <span class="voice-icon">👩</span>
+                <span class="voice-name">Sarah</span>
+                <span class="voice-desc">Friendly</span>
+              </label>
+              <label class="voice-option" :class="{ active: localSettings.voiceGender === 'adam' }">
+                <input
+                  type="radio"
+                  name="voiceGender"
+                  value="adam"
+                  :checked="localSettings.voiceGender === 'adam'"
+                  @change="updateSetting('voiceGender', 'adam')"
+                >
+                <span class="voice-icon">👨</span>
+                <span class="voice-name">Adam</span>
+                <span class="voice-desc">Deep</span>
+              </label>
+              <label class="voice-option" :class="{ active: localSettings.voiceGender === 'josh' }">
+                <input
+                  type="radio"
+                  name="voiceGender"
+                  value="josh"
+                  :checked="localSettings.voiceGender === 'josh'"
+                  @change="updateSetting('voiceGender', 'josh')"
+                >
+                <span class="voice-icon">👨</span>
+                <span class="voice-name">Josh</span>
+                <span class="voice-desc">Young</span>
+              </label>
+            </div>
+            <button class="preview-voice-button" @click="previewVoice">
+              Preview Voice
+            </button>
           </div>
-          <button class="preview-voice-button" @click="previewVoice">
-            Preview Voice
-          </button>
-        </div>
 
-        <!-- Font Selection -->
-        <div class="setting-item font-section">
-          <label class="setting-label-standalone">Font Style</label>
-          <p class="font-section-description">
-            Choose a handwriting style that matches your classroom curriculum
-          </p>
+          <!-- Font Selection -->
+          <div class="setting-item font-section">
+            <label class="setting-label-standalone">Font Style</label>
+            <p class="font-section-description">
+              Choose a handwriting style that matches your classroom curriculum
+            </p>
 
-          <div class="font-options">
-            <label
-              v-for="font in fontsDetailed"
-              :key="font.name"
-              class="font-option"
-              :class="{ active: localSettings.selectedFont === font.name }"
-            >
-              <input
-                type="radio"
-                name="selectedFont"
-                :value="font.name"
-                :checked="localSettings.selectedFont === font.name"
-                @change="updateSetting('selectedFont', font.name)"
+            <div class="font-options">
+              <label
+                v-for="font in fontsDetailed"
+                :key="font.name"
+                class="font-option"
+                :class="{ active: localSettings.selectedFont === font.name }"
               >
-              <div class="font-option-content">
-                <div class="font-option-header">
-                  <span class="font-display-name">{{ font.display_name }}</span>
-                  <span class="font-style-tag">{{ font.style }}</span>
+                <input
+                  type="radio"
+                  name="selectedFont"
+                  :value="font.name"
+                  :checked="localSettings.selectedFont === font.name"
+                  @change="updateSetting('selectedFont', font.name)"
+                >
+                <div class="font-option-content">
+                  <div class="font-option-header">
+                    <span class="font-display-name">{{ font.display_name }}</span>
+                    <span class="font-style-tag">{{ font.style }}</span>
+                  </div>
+                  <p class="font-option-description">{{ font.description }}</p>
+                  <div class="font-characteristics">
+                    <span
+                      v-for="char in font.characteristics"
+                      :key="char"
+                      class="font-characteristic"
+                    >{{ char }}</span>
+                  </div>
                 </div>
-                <p class="font-option-description">{{ font.description }}</p>
-                <div class="font-characteristics">
-                  <span
-                    v-for="char in font.characteristics"
-                    :key="char"
-                    class="font-characteristic"
-                  >{{ char }}</span>
-                </div>
-              </div>
-            </label>
+              </label>
+            </div>
+
+            <button class="preview-button" @click="showFontPreview">
+              Preview All Characters
+            </button>
           </div>
 
-          <button class="preview-button" @click="showFontPreview">
-            Preview All Characters
-          </button>
-        </div>
-
-        <!-- Debug Mode -->
-        <div class="setting-item">
-          <label class="setting-toggle">
-            <input
-              type="checkbox"
-              :checked="localSettings.enableDebugMode"
-              @change="updateSetting('enableDebugMode', $event.target.checked)"
-            >
-            <span class="toggle-slider" />
-            <span class="setting-label">Enable Debug Mode</span>
-          </label>
-        </div>
+          <!-- Debug Mode -->
+          <div class="setting-item">
+            <label class="setting-toggle">
+              <input
+                type="checkbox"
+                :checked="localSettings.enableDebugMode"
+                @change="updateSetting('enableDebugMode', $event.target.checked)"
+              >
+              <span class="toggle-slider" />
+              <span class="setting-label">Enable Debug Mode</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -483,6 +531,7 @@
 import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { apiUrl } from '@/config/api'
+import { useAuth } from '@/composables/useAuth'
 
 export default {
   name: 'SettingsPanel',
@@ -492,8 +541,9 @@ export default {
       required: true
     }
   },
-  emits: ['close', 'update:settings'],
+  emits: ['close', 'update:settings', 'show-auth'],
   setup(props, { emit }) {
+    const { user, isAuthenticated, logout } = useAuth()
     const localSettings = ref({ ...props.settings })
     const availableFonts = ref(['Fredoka-Regular'])
     const fontsDetailed = ref([
@@ -569,6 +619,14 @@ export default {
 
     onMounted(fetchFonts)
 
+    const showAuthModal = (mode) => {
+      emit('show-auth', mode)
+    }
+
+    const handleLogout = async () => {
+      await logout()
+    }
+
     return {
       localSettings,
       availableFonts,
@@ -578,7 +636,12 @@ export default {
       fontPreviewLoading,
       updateSetting,
       showFontPreview,
-      previewVoice
+      previewVoice,
+      // Auth
+      user,
+      isAuthenticated,
+      showAuthModal,
+      handleLogout
     }
   }
 }
@@ -1054,6 +1117,134 @@ export default {
   line-height: 1.4;
 }
 
+/* Account Section Styles */
+.account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.account-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-avatar {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.account-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.account-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.account-email {
+  font-size: 0.85rem;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #4ECDC4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-status::before {
+  content: "✓";
+  font-weight: 700;
+}
+
+.logout-button {
+  padding: 10px 20px;
+  background: #f0f0f0;
+  color: #666;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  align-self: flex-start;
+}
+
+.logout-button:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.account-guest {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.guest-message {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.5;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.auth-button {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auth-button.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.auth-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.auth-button.secondary {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.auth-button.secondary:hover {
+  background: #e0e0e0;
+}
+
 @media (max-width: 600px) {
   .settings-panel {
     width: 100%;
@@ -1071,6 +1262,10 @@ export default {
 
   .radio-label {
     font-size: 0.75rem;
+  }
+
+  .auth-buttons {
+    flex-direction: column;
   }
 }
 </style>

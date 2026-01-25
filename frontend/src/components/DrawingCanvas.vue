@@ -20,6 +20,10 @@
         <template v-else>
           <span class="char-info">Draw this {{ charType }}!</span>
         </template>
+        <!-- High Score Display (when logged in and has previous score) -->
+        <span v-if="highScoreForMode !== null && !playerName" class="high-score-display">
+          High Score: {{ highScoreForMode }}
+        </span>
         <span v-if="bestOf3Mode" class="attempt-indicator">
           Attempt {{ currentAttempt }} of 3
           <span class="attempt-dots">
@@ -323,7 +327,12 @@
         <span class="btn-text">Clear</span>
       </button>
 
-      <button class="control-btn submit-btn" :disabled="isSubmitting" aria-label="Submit drawing" @click="submitDrawing">
+      <button
+        class="control-btn submit-btn"
+        :disabled="isSubmitting"
+        aria-label="Submit drawing"
+        @click="submitDrawing"
+      >
         <span class="btn-icon" aria-hidden="true">{{ isSubmitting ? '⏳' : '✓' }}</span>
         <span class="btn-text">{{ isSubmitting ? 'Checking...' : 'Done!' }}</span>
       </button>
@@ -334,6 +343,7 @@
 <script>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick, toRefs } from 'vue'
 import axios from 'axios'
+import api from '@/services/api'
 import { apiUrl } from '@/config/api'
 
 export default {
@@ -424,6 +434,14 @@ export default {
       default: 1.0
     },
     enableCaptions: {
+      type: Boolean,
+      default: false
+    },
+    highScoreForMode: {
+      type: Number,
+      default: null
+    },
+    isMultiplayer: {
       type: Boolean,
       default: false
     }
@@ -781,10 +799,20 @@ export default {
       try {
         const imageData = canvas.value.toDataURL('image/png')
 
-        const response = await axios.post(apiUrl('/api/score'), {
+        // Determine the drawing mode
+        let mode = 'freestyle'
+        if (props.guidedMode) {
+          mode = 'step-by-step'
+        } else if (props.dashTracingMode) {
+          mode = 'tracing'
+        }
+
+        const response = await api.post('/api/score', {
           image_data: imageData,
           character: props.character,
-          font: props.selectedFont || null
+          font: props.selectedFont || null,
+          mode: mode,
+          record_progress: !props.isMultiplayer  // Don't record progress in multiplayer
         })
 
         emit('submit', {
@@ -1169,6 +1197,19 @@ export default {
 .turn-progress {
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.9rem;
+}
+
+/* High Score Display */
+.high-score-display {
+  color: #FFE66D;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 12px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .canvas-wrapper {

@@ -29,11 +29,15 @@
           :key="char"
           role="listitem"
           class="character-button"
+          :class="{ 'has-progress': getCharProgress(char) }"
           :style="{ '--char-color': getCharColor(char), fontFamily: fontFamily }"
           :aria-label="getCharacterLabel(char)"
           @click="$emit('select-character', char)"
         >
           {{ char }}
+          <span v-if="getCharProgress(char)" class="progress-stars" :aria-label="`${getCharProgress(char).stars} stars`">
+            <span class="star-display">{{ getStarsDisplay(getCharProgress(char).stars) }}</span>
+          </span>
         </button>
       </div>
     </div>
@@ -55,6 +59,10 @@ export default {
     selectedFont: {
       type: String,
       default: 'Fredoka-Regular'
+    },
+    progress: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['select-character'],
@@ -103,6 +111,21 @@ export default {
       } else {
         return `Number ${char}`
       }
+    }
+
+    // Get progress for a specific character
+    const getCharProgress = (char) => {
+      return props.progress.find(p => p.character === char)
+    }
+
+    // Get stars display (filled and empty stars)
+    const getStarsDisplay = (stars) => {
+      if (stars >= 5) return '★★★★★'
+      if (stars >= 4) return '★★★★☆'
+      if (stars >= 3) return '★★★☆☆'
+      if (stars >= 2) return '★★☆☆☆'
+      if (stars >= 1) return '★☆☆☆☆'
+      return '☆☆☆☆☆'
     }
 
     // Font loading for character display
@@ -165,7 +188,9 @@ export default {
       currentCharacters,
       getCharColor,
       getCharacterLabel,
-      fontFamily
+      fontFamily,
+      getCharProgress,
+      getStarsDisplay
     }
   }
 }
@@ -247,6 +272,25 @@ export default {
 
 .character-button:active {
   transform: scale(0.95);
+}
+
+.character-button.has-progress {
+  position: relative;
+}
+
+.progress-stars {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.5rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.star-display {
+  color: #FFD700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .instructions {

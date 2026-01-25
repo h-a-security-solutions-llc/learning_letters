@@ -7,31 +7,40 @@ packages = [{include = "app"}, {include = "tests"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-fastapi = "^0.109.0"
-uvicorn = {extras = ["standard"], version = "^0.27.0"}
-pillow = "^10.2.0"
-numpy = "^1.26.0"
-scikit-image = "^0.22.0"
-python-multipart = "^0.0.6"
+fastapi = "^0.128.0"
+uvicorn = {extras = ["standard"], version = "^0.40.0"}
+pillow = "^12.0.0"
+numpy = "^2.0.0"
+scikit-image = "^0.24.0"
+python-multipart = "^0.0.21"
 gtts = "^2.5.0"
 pydub = "^0.25.0"
-elevenlabs = "^1.0.0"
+elevenlabs = "^2.0.0"
 python-dotenv = "^1.0.0"
+rembg = "^2.0.0"
+# Authentication and database
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+sqlalchemy = "^2.0.0"
+aiosqlite = "^0.19.0"
+alembic = "^1.13.0"
+email-validator = "^2.1.0"
+argon2-cffi = "^23.1.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.0.0"
-pytest-cov = "^4.1.0"
-pytest-asyncio = "^0.23.0"
-httpx = "^0.26.0"
+pytest = "^9.0.0"
+pytest-cov = "^7.0.0"
+pytest-asyncio = "^1.0.0"
+httpx = "^0.28.0"
 coverage = {extras = ["toml"], version = "^7.4.0"}
 mypy = "^1.8.0"
-pylint = "^3.0.0"
+pylint = "^4.0.0"
 flake8 = "^7.0.0"
-flake8-bugbear = "^24.2.0"
-isort = "^5.13.0"
-black = "^24.1.0"
+flake8-bugbear = "^25.0.0"
+isort = "^6.0.0"
+black = "^26.0.0"
 bandit = "^1.7.0"
 types-pillow = "^10.2.0"
+types-requests = "^2.31.0"
 
 [tool.poetry.scripts]
 letters = "app.main:main"
@@ -94,6 +103,7 @@ disable = [
     "too-many-statements",  # Complex validation functions
     "redefined-outer-name",  # Common in __main__ blocks
     "global-statement",  # Used for caching
+    "too-many-return-statements",  # Complex functions with multiple exit points
 ]
 
 # pytest configuration
