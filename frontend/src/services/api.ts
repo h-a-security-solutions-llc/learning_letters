@@ -200,6 +200,13 @@ export const progressApi = {
     })
     return response.data
   },
+
+  async clearProgress(modes: string[]) {
+    const response = await api.delete('/api/progress/', {
+      data: { modes },
+    })
+    return response.data
+  },
 }
 
 export default api

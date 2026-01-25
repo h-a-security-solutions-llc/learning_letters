@@ -113,7 +113,9 @@
         v-if="currentView === 'selection'"
         :selected-font="settings.selectedFont"
         :progress="userProgress"
+        :is-authenticated="isAuthenticated"
         @select-character="onSelectCharacter"
+        @clear-scores="onClearScores"
       />
 
       <!-- Drawing View -->
@@ -445,6 +447,20 @@ export default {
       } catch (e) {
         console.error('Failed to fetch progress:', e)
         userProgress.value = []
+      }
+    }
+
+    // Clear user progress for specified modes
+    const onClearScores = async (modes) => {
+      if (!isAuthenticated.value || modes.length === 0) return
+
+      try {
+        const result = await progressApi.clearProgress(modes)
+        console.log(`Cleared ${result.deleted_count} progress entries`)
+        // Refresh progress data
+        await fetchProgress()
+      } catch (e) {
+        console.error('Failed to clear progress:', e)
       }
     }
 
@@ -840,6 +856,7 @@ export default {
       // Progress
       userProgress,
       fetchProgress,
+      onClearScores,
       currentDrawingMode,
       highScoreForMode
     }

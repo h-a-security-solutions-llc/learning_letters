@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -217,3 +217,45 @@ async def record_attempt(
             best_attempt_at=progress.best_attempt_at,
         ),
     )
+
+
+class ClearProgressRequest(BaseModel):
+    """Request to clear progress for specific modes."""
+
+    modes: List[str]  # List of modes to clear: freestyle, tracing, step-by-step
+
+
+class ClearProgressResponse(BaseModel):
+    """Response after clearing progress."""
+
+    deleted_count: int
+
+
+@router.delete("/", response_model=ClearProgressResponse)
+async def clear_progress(
+    request: ClearProgressRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Clear progress for the current user for specified modes.
+
+    - **modes**: List of modes to clear (freestyle, tracing, step-by-step)
+    """
+    valid_modes = ["freestyle", "tracing", "step-by-step"]
+    modes_to_clear = [m for m in request.modes if m in valid_modes]
+
+    if not modes_to_clear:
+        raise HTTPException(status_code=400, detail="No valid modes specified")
+
+    # Delete progress entries for the specified modes
+    result = await db.execute(
+        delete(UserProgress).where(
+            UserProgress.user_id == current_user.id,
+            UserProgress.mode.in_(modes_to_clear),
+        )
+    )
+
+    deleted_count = result.rowcount
+
+    return ClearProgressResponse(deleted_count=deleted_count)

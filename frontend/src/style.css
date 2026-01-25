@@ -21,6 +21,40 @@ body.ui-scale-100 { --ui-scale: 1; }
 body.ui-scale-125 { --ui-scale: 1.25; }
 body.ui-scale-150 { --ui-scale: 1.5; }
 
+/* Apply actual scaling to header and selection views, but not the canvas */
+body.ui-scale-125 .app-header,
+body.ui-scale-125 .selection-container,
+body.ui-scale-125 .results-container,
+body.ui-scale-125 .settings-panel {
+  zoom: 1.25;
+}
+
+body.ui-scale-150 .app-header,
+body.ui-scale-150 .selection-container,
+body.ui-scale-150 .results-container,
+body.ui-scale-150 .settings-panel {
+  zoom: 1.5;
+}
+
+/* Firefox fallback (doesn't support zoom) */
+@supports not (zoom: 1) {
+  body.ui-scale-125 .app-header,
+  body.ui-scale-125 .selection-container,
+  body.ui-scale-125 .results-container,
+  body.ui-scale-125 .settings-panel {
+    transform: scale(1.25);
+    transform-origin: top left;
+  }
+
+  body.ui-scale-150 .app-header,
+  body.ui-scale-150 .selection-container,
+  body.ui-scale-150 .results-container,
+  body.ui-scale-150 .settings-panel {
+    transform: scale(1.5);
+    transform-origin: top left;
+  }
+}
+
 /* ==========================================
    REDUCED MOTION STYLES
    ========================================== */
@@ -236,9 +270,54 @@ body.high-contrast .character-button:hover {
   transform: none !important;
 }
 
+body.high-contrast .stars-filled {
+  color: #FFFF00 !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast .stars-empty {
+  color: #666666 !important;
+}
+
 body.high-contrast .instructions p {
   color: #FFFFFF !important;
   text-shadow: none !important;
+}
+
+body.high-contrast .clear-scores-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .clear-scores-btn:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .modal-content {
+  background: #000000 !important;
+  border: 3px solid #FFFFFF !important;
+}
+
+body.high-contrast .modal-content h3,
+body.high-contrast .modal-content p {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .mode-checkbox span {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .modal-btn.cancel {
+  background: #333333 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .modal-btn.confirm {
+  background: #FFFFFF !important;
+  color: #000000 !important;
 }
 
 /* Drawing Canvas */
