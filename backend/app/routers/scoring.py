@@ -1,4 +1,7 @@
+"""Scoring router for evaluating drawn characters."""
+
 from typing import Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -8,11 +11,16 @@ router = APIRouter()
 
 
 class ScoreRequest(BaseModel):
+    """Request model for scoring a drawn character."""
+
     image_data: str  # Base64 encoded image
-    character: str   # The character that was drawn
+    character: str  # The character that was drawn
+    font: Optional[str] = None  # Font name (e.g., 'Fredoka-Regular')
 
 
 class ScoreResponse(BaseModel):
+    """Response model for character scoring."""
+
     score: int
     stars: int
     feedback: str
@@ -35,7 +43,7 @@ async def score_character(request: ScoreRequest):
     if not request.character or len(request.character) != 1:
         raise HTTPException(status_code=400, detail="Single character is required")
 
-    result = score_drawing(request.image_data, request.character)
+    result = score_drawing(request.image_data, request.character, request.font)
 
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])

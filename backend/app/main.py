@@ -1,10 +1,15 @@
+"""Main FastAPI application for Learning Letters API."""
+
+import os
+import threading
 from contextlib import asynccontextmanager
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
-import threading
-from dotenv import load_dotenv
+
+from app.routers import characters, scoring
 
 # Load environment variables
 load_dotenv()
@@ -12,14 +17,14 @@ load_dotenv()
 
 def pregenerate_audio_files():
     """Pre-generate all audio files in background thread."""
-    from app.services.audio_generator import generate_audio_file, get_audio_path, CHARACTER_DATA
+    from app.services.audio_generator import CHARACTER_DATA, generate_audio_file, get_audio_path
 
     # Generate for Rachel (female) and Adam (male) voices
-    for voice in ['rachel', 'adam']:
+    for voice in ["rachel", "adam"]:
         missing = 0
         generated = 0
 
-        for character in CHARACTER_DATA.keys():
+        for character in CHARACTER_DATA:
             path = get_audio_path(character, voice)
             if not os.path.exists(path):
                 missing += 1
@@ -37,7 +42,7 @@ def pregenerate_audio_files():
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Startup and shutdown events."""
     # Start audio pre-generation in background thread (non-blocking)
     thread = threading.Thread(target=pregenerate_audio_files, daemon=True)
@@ -46,13 +51,11 @@ async def lifespan(app: FastAPI):
     # Cleanup on shutdown (if needed)
 
 
-from app.routers import scoring, characters
-
 app = FastAPI(
     title="Learning Letters API",
     description="API for kids alphabet and number learning app",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS middleware for frontend
@@ -75,15 +78,19 @@ app.include_router(characters.router, prefix="/api", tags=["characters"])
 
 @app.get("/")
 async def root():
+    """Root endpoint returning API status."""
     return {"message": "Learning Letters API", "status": "running"}
 
 
 @app.get("/health")
 async def health_check():
+    """Health check endpoint."""
     return {"status": "healthy"}
 
 
 def main():
     """Entry point for poetry run letters command."""
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=7000, reload=True)
+
+    # nosec B104 - Development server binding to all interfaces for local testing
+    uvicorn.run("app.main:app", host="0.0.0.0", port=7000, reload=True)  # nosec

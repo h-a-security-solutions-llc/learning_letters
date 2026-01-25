@@ -3,7 +3,7 @@ name = "learning-letters-api"
 version = "0.1.0"
 description = "FastAPI backend for kids alphabet and number learning app"
 authors = ["Developer"]
-packages = [{include = "app"}]
+packages = [{include = "app"}, {include = "tests"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -19,12 +19,113 @@ elevenlabs = "^1.0.0"
 python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.4.0"
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.23.0"
 httpx = "^0.26.0"
+coverage = {extras = ["toml"], version = "^7.4.0"}
+mypy = "^1.8.0"
+pylint = "^3.0.0"
+flake8 = "^7.0.0"
+flake8-bugbear = "^24.2.0"
+isort = "^5.13.0"
+black = "^24.1.0"
+bandit = "^1.7.0"
+types-pillow = "^10.2.0"
 
 [tool.poetry.scripts]
 letters = "app.main:main"
+lint-all = "app.scripts:run_lint_all"
+lint = "app.scripts:run_lint"
+tests = "app.scripts:run_tests"
+cov = "app.scripts:run_coverage"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+# Black configuration
+[tool.black]
+line-length = 120
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 120
+default_section = "THIRDPARTY"
+known_first_party = ["app", "tests"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
+# mypy configuration
+[tool.mypy]
+exclude = "^tests/.*\\.py"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.*"]
+ignore_missing_imports = true
+
+# pylint configuration
+[tool.pylint.FORMAT]
+max-line-length = 120
+
+[tool.pylint.MASTER]
+ignore-patterns = "^tests/.*,^.*tests/.*,^tests$"
+ignore = "tests"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "too-few-public-methods",
+    "R0801",  # duplicate-code
+    "C0103",  # invalid-name (allow flexible naming for domain models)
+    "W0246",  # useless-parent-delegation
+    "W0012",  # unknown-option-value
+    "too-many-instance-attributes",
+    "too-many-nested-blocks",
+    "too-many-branches",
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    "broad-exception-caught",
+    "logging-fstring-interpolation",
+    "too-many-locals",
+    "fixme",  # W0511 - TODO comments are informational
+    "import-outside-toplevel",  # Intentional lazy loading for slow imports
+    "too-many-lines",  # Large data files (CHARACTERS dict)
+    "too-many-statements",  # Complex validation functions
+    "redefined-outer-name",  # Common in __main__ blocks
+    "global-statement",  # Used for caching
+]
+
+# pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+
+# coverage configuration
+[tool.coverage.run]
+source = ["app"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/scripts.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+fail_under = 78
+show_missing = true
+
+[tool.coverage.html]
+directory = "htmlcov"

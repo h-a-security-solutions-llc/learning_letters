@@ -1,3 +1,54 @@
+/* ==========================================
+   CSS CUSTOM PROPERTIES FOR ACCESSIBILITY
+   ========================================== */
+
+:root {
+  --ui-scale: 1;
+  --font-size-base: calc(1rem * var(--ui-scale));
+  --font-size-sm: calc(0.875rem * var(--ui-scale));
+  --font-size-lg: calc(1.25rem * var(--ui-scale));
+  --font-size-xl: calc(1.5rem * var(--ui-scale));
+  --font-size-2xl: calc(2rem * var(--ui-scale));
+  --spacing-sm: calc(0.5rem * var(--ui-scale));
+  --spacing-md: calc(1rem * var(--ui-scale));
+  --spacing-lg: calc(1.5rem * var(--ui-scale));
+  --button-padding: calc(12px * var(--ui-scale)) calc(24px * var(--ui-scale));
+  --button-font-size: calc(1rem * var(--ui-scale));
+  --icon-size: calc(1.5rem * var(--ui-scale));
+}
+
+body.ui-scale-100 { --ui-scale: 1; }
+body.ui-scale-125 { --ui-scale: 1.25; }
+body.ui-scale-150 { --ui-scale: 1.5; }
+
+/* ==========================================
+   REDUCED MOTION STYLES
+   ========================================== */
+
+/* System preference default - reduce animations unless motion-enabled is set */
+@media (prefers-reduced-motion: reduce) {
+  body:not(.motion-enabled) *,
+  body:not(.motion-enabled) *::before,
+  body:not(.motion-enabled) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Manual override - force reduced motion */
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* ==========================================
+   BASE STYLES
+   ========================================== */
+
 * {
   margin: 0;
   padding: 0;
@@ -59,4 +110,875 @@ button:active {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.7);
+}
+
+/* ==========================================
+   HIGH CONTRAST MODE
+   ========================================== */
+
+body.high-contrast {
+  background: #000000 !important;
+}
+
+/* Header */
+body.high-contrast .app-header {
+  background: #000000 !important;
+  border-bottom: 3px solid #FFFFFF !important;
+}
+
+body.high-contrast .app-header h1 .title-letter,
+body.high-contrast .app-header h1 .title-text {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+  animation: none !important;
+}
+
+body.high-contrast .back-button {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .back-button:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .settings-button {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .settings-button:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .scoreboard {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .scoreboard-label {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .scoreboard-divider {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .player-score {
+  background: transparent !important;
+  border: 1px solid #FFFFFF !important;
+}
+
+body.high-contrast .player-name-short {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .player-wins {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .mode-toggle {
+  background: #000000 !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .mode-btn {
+  background: transparent !important;
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .mode-btn.active {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+/* Character Selection */
+body.high-contrast .selection-container {
+  background: #000000 !important;
+}
+
+body.high-contrast .category-tab {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+}
+
+body.high-contrast .category-tab.active {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+body.high-contrast .character-grid-container {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .character-button {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .character-button:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+  transform: none !important;
+}
+
+body.high-contrast .instructions p {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+/* Drawing Canvas */
+body.high-contrast .drawing-container {
+  background: #000000 !important;
+}
+
+body.high-contrast .character-display {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .current-char {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast .char-info,
+body.high-contrast .player-turn,
+body.high-contrast .turn-progress {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .attempt-indicator {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .attempt-dot {
+  background: #333333 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .attempt-dot.filled {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .attempt-dot.current {
+  background: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .canvas-wrapper {
+  background: transparent !important;
+}
+
+body.high-contrast .drawing-canvas {
+  background: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .play-sound-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .play-sound-btn:hover:not(:disabled) {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .controls {
+  background: transparent !important;
+}
+
+body.high-contrast .control-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .control-btn:hover:not(:disabled),
+body.high-contrast .control-btn.active {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .trace-btn,
+body.high-contrast .dash-btn,
+body.high-contrast .best3-btn,
+body.high-contrast .debug-btn,
+body.high-contrast .step-btn,
+body.high-contrast .clear-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .trace-btn:hover,
+body.high-contrast .dash-btn:hover,
+body.high-contrast .best3-btn:hover,
+body.high-contrast .debug-btn:hover,
+body.high-contrast .step-btn:hover,
+body.high-contrast .clear-btn:hover,
+body.high-contrast .trace-btn.active,
+body.high-contrast .dash-btn.active,
+body.high-contrast .best3-btn.active,
+body.high-contrast .debug-btn.active,
+body.high-contrast .step-btn.active {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .submit-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .submit-btn:hover:not(:disabled) {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .guided-progress {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .progress-text {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .progress-dot {
+  background: #333333 !important;
+  border: 1px solid #FFFFFF !important;
+}
+
+body.high-contrast .progress-dot.completed {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .progress-dot.current {
+  background: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+/* Results Display */
+body.high-contrast .results-container {
+  background: #000000 !important;
+}
+
+body.high-contrast .score-section {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .score-number,
+body.high-contrast .feedback {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast .star {
+  color: #666666 !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast .star.filled {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+  animation: none !important;
+}
+
+body.high-contrast .comparison-section {
+  background: #000000 !important;
+}
+
+body.high-contrast .comparison-item h3 {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .image-container {
+  background: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .vs-divider span {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .character-info-section {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .character-large {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast .speak-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .speak-btn:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .action-btn {
+  box-shadow: none !important;
+}
+
+body.high-contrast .try-again-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+}
+
+body.high-contrast .try-again-btn:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .next-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+}
+
+body.high-contrast .next-btn:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .attempts-section {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .attempts-section h3 {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .attempt-card {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .attempt-card.best {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .attempt-label {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .best-badge {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .attempt-card img {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .attempt-score {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .debug-section {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .debug-section h3 {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .debug-explanation {
+  color: #CCCCCC !important;
+}
+
+body.high-contrast .debug-item {
+  background: #000000 !important;
+  border: 1px solid #FFFFFF !important;
+}
+
+body.high-contrast .debug-item.highlight {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .debug-item span {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .debug-item small {
+  color: #CCCCCC !important;
+}
+
+body.high-contrast .debug-item img {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .detail-item {
+  background: #000000 !important;
+  border: 1px solid #FFFFFF !important;
+}
+
+body.high-contrast .detail-label {
+  color: #CCCCCC !important;
+}
+
+body.high-contrast .detail-value {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .detail-item small {
+  color: #AAAAAA !important;
+}
+
+/* Settings Panel */
+body.high-contrast .settings-overlay {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+body.high-contrast .settings-panel {
+  background: #000000 !important;
+  border-left: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .settings-header {
+  background: #000000 !important;
+  border-bottom: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .settings-header h2 {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .close-button {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .close-button:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .settings-content {
+  background: #000000 !important;
+}
+
+body.high-contrast .setting-item {
+  border-bottom-color: #FFFFFF !important;
+}
+
+body.high-contrast .setting-label,
+body.high-contrast .setting-label-standalone,
+body.high-contrast .setting-description {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .toggle-slider {
+  background: #333333 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .toggle-slider::after {
+  background: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .setting-toggle input:checked + .toggle-slider {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .setting-toggle input:checked + .toggle-slider::after {
+  background: #000000 !important;
+}
+
+body.high-contrast .voice-option {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .voice-option.active {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .voice-option.active .voice-name,
+body.high-contrast .voice-option.active .voice-desc {
+  color: #000000 !important;
+}
+
+body.high-contrast .voice-name,
+body.high-contrast .voice-desc {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .font-select {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .font-select option {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .preview-button,
+body.high-contrast .preview-voice-button {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .preview-button:hover,
+body.high-contrast .preview-voice-button:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .nested-setting {
+  border-left-color: #FFFFFF !important;
+}
+
+/* Modals */
+body.high-contrast .confirm-overlay {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+body.high-contrast .confirm-modal {
+  background: #000000 !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .confirm-modal h3,
+body.high-contrast .confirm-modal p {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .confirm-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .confirm-btn:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+/* Preview Modal */
+body.high-contrast .preview-modal {
+  background: rgba(0, 0, 0, 0.95) !important;
+}
+
+body.high-contrast .preview-content {
+  background: #000000 !important;
+  border: 3px solid #FFFFFF !important;
+}
+
+body.high-contrast .preview-header {
+  background: #000000 !important;
+  border-bottom: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .preview-header h3 {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .preview-loading,
+body.high-contrast .preview-error {
+  color: #FFFFFF !important;
+}
+
+/* Multiplayer Setup Wizard */
+body.high-contrast .wizard-overlay {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+body.high-contrast .wizard-panel {
+  background: #000000 !important;
+  border-left: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .wizard-header {
+  background: #000000 !important;
+  border-bottom: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .wizard-header h2 {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .wizard-content {
+  background: #000000 !important;
+}
+
+body.high-contrast .step-content h3 {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .count-btn {
+  background: #000000 !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .count-btn:hover,
+body.high-contrast .count-btn.selected {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .count-btn:hover .count-number,
+body.high-contrast .count-btn:hover .count-label,
+body.high-contrast .count-btn.selected .count-number,
+body.high-contrast .count-btn.selected .count-label {
+  color: #000000 !important;
+}
+
+body.high-contrast .count-number,
+body.high-contrast .count-label {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .player-card {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .player-number {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .player-name-input {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .option-label {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .step-dot {
+  background: #333333 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .step-dot.active {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .wizard-footer {
+  border-top-color: #FFFFFF !important;
+}
+
+body.high-contrast .footer-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .footer-btn:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+/* Multiplayer Results */
+body.high-contrast .multiplayer-results-container {
+  background: #000000 !important;
+}
+
+body.high-contrast .winner-banner {
+  background: #000000 !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+body.high-contrast .winner-text,
+body.high-contrast .tie-names {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast .player-result-card {
+  background: #000000 !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .player-result-card.winner {
+  background: #000000 !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .rank-badge {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .rank-badge.gold,
+body.high-contrast .rank-badge.silver,
+body.high-contrast .rank-badge.bronze {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .player-name {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .drawing-thumbnail {
+  background: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .player-result-card .star {
+  color: #666666 !important;
+}
+
+body.high-contrast .player-result-card .star.filled {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast .player-result-card .score {
+  color: #FFFFFF !important;
+}
+
+body.high-contrast .character-section {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+body.high-contrast .character-display {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast .speak-btn {
+  background: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .speak-btn:hover {
+  background: #FFFFFF !important;
+}
+
+body.high-contrast .play-again-btn,
+body.high-contrast .next-letter-btn {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .play-again-btn:hover,
+body.high-contrast .next-letter-btn:hover {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+/* Scrollbar in high contrast */
+body.high-contrast ::-webkit-scrollbar-track {
+  background: #000000 !important;
+}
+
+body.high-contrast ::-webkit-scrollbar-thumb {
+  background: #FFFFFF !important;
+  border: 1px solid #000000 !important;
+}
+
+body.high-contrast ::-webkit-scrollbar-thumb:hover {
+  background: #CCCCCC !important;
+}
+
+/* ==========================================
+   ACCESSIBILITY SETTINGS UI - HIGH CONTRAST
+   ========================================== */
+
+body.high-contrast .setting-section-title {
+  color: #FFFFFF !important;
+  border-bottom-color: #FFFFFF !important;
+}
+
+body.high-contrast .radio-group {
+  border-color: #FFFFFF !important;
+}
+
+body.high-contrast .radio-option {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+}
+
+body.high-contrast .radio-option.active {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+body.high-contrast .radio-option:hover:not(.active) {
+  background: #333333 !important;
+}
+
+body.high-contrast .speed-icon {
+  filter: invert(1);
+}
+
+body.high-contrast .radio-option.active .speed-icon {
+  filter: none;
+}
+
+/* Audio Caption Toast - High Contrast */
+body.high-contrast .audio-caption-toast {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 3px solid #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.high-contrast .caption-phonetic {
+  color: #CCCCCC !important;
 }

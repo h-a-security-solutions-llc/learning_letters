@@ -1,40 +1,45 @@
+"""Trace generator service for creating character stroke paths and trace images."""
+
 import base64
 import io
 import os
-from PIL import Image, ImageDraw, ImageFont
+from typing import Optional
+
 import numpy as np
-from skimage.morphology import skeletonize
+from PIL import Image, ImageDraw, ImageFont
 from scipy.ndimage import binary_dilation, label
-from collections import deque
+from skimage.morphology import skeletonize
 
 
-def get_font(size: int, font_name: str = None):
+def get_font(size: int, font_name: Optional[str] = None):
     """Get font at specified size. If font_name is provided, use that font."""
-    fonts_dir = os.path.join(os.path.dirname(__file__), '..', 'fonts')
+    fonts_dir = os.path.join(os.path.dirname(__file__), "..", "fonts")
     fonts_dir = os.path.abspath(fonts_dir)
 
     font_paths = []
 
     if font_name:
         # Try to find the specified font
-        if not font_name.endswith('.ttf'):
-            font_name_with_ext = font_name + '.ttf'
+        if not font_name.endswith(".ttf"):
+            font_name_with_ext = font_name + ".ttf"
         else:
             font_name_with_ext = font_name
         font_paths.append(os.path.join(fonts_dir, font_name_with_ext))
 
     # Default/fallback fonts
-    font_paths.extend([
-        os.path.join(fonts_dir, 'Fredoka-Regular.ttf'),
-        "/usr/share/fonts/truetype/fredoka/Fredoka-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans.ttf",
-    ])
+    font_paths.extend(
+        [
+            os.path.join(fonts_dir, "Fredoka-Regular.ttf"),
+            "/usr/share/fonts/truetype/fredoka/Fredoka-Regular.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        ]
+    )
 
     for font_path in font_paths:
         try:
             return ImageFont.truetype(font_path, size)
-        except (OSError, IOError):
+        except OSError:
             continue
 
     return ImageFont.load_default()
@@ -42,22 +47,22 @@ def get_font(size: int, font_name: str = None):
 
 def get_available_fonts() -> list:
     """Get list of available font names from the fonts directory"""
-    fonts_dir = os.path.join(os.path.dirname(__file__), '..', 'fonts')
+    fonts_dir = os.path.join(os.path.dirname(__file__), "..", "fonts")
     fonts_dir = os.path.abspath(fonts_dir)
 
     fonts = []
     if os.path.exists(fonts_dir):
         for f in os.listdir(fonts_dir):
-            if f.endswith('.ttf'):
+            if f.endswith(".ttf"):
                 # Return font name without extension
                 fonts.append(f[:-4])
 
     return sorted(fonts)
 
 
-def generate_character_image(character: str, size: int = 400, font_name: str = None) -> np.ndarray:
+def generate_character_image(character: str, size: int = 400, font_name: Optional[str] = None) -> np.ndarray:
     """Generate a binary image of the character"""
-    img = Image.new('L', (size, size), color=255)
+    img = Image.new("L", (size, size), color=255)
     draw = ImageDraw.Draw(img)
 
     font_size = int(size * 0.75)
@@ -111,8 +116,7 @@ def find_special_points(skeleton: np.ndarray) -> tuple:
     return endpoints, junctions
 
 
-def trace_path_to_special(skeleton: np.ndarray, start: tuple, visited_edges: set,
-                          special_points: set) -> list:
+def trace_path_to_special(skeleton: np.ndarray, start: tuple, visited_edges: set, special_points: set) -> list:
     """
     Trace a path from start point until reaching a junction, endpoint, or dead end.
     Uses visited_edges to avoid retracing the same edge twice.
@@ -182,7 +186,7 @@ def extract_stroke_paths(skeleton: np.ndarray, min_length: int = 10) -> list:
         special_points = set(endpoints + junctions)
 
         # Track visited edges to avoid duplicates
-        visited_edges = set()
+        visited_edges: set[tuple] = set()
 
         # Start tracing from endpoints first (they have clear start points)
         start_points = endpoints + junctions
@@ -224,13 +228,14 @@ def deduplicate_paths(paths: list) -> list:
     if not paths:
         return paths
 
-    unique_paths = []
+    unique_paths: list[list] = []
 
     for path in paths:
         path_set = set(tuple(p) for p in path)
 
         is_duplicate = False
-        for existing in unique_paths:
+        path_to_remove = None
+        for existing in list(unique_paths):  # Iterate over a copy
             existing_set = set(tuple(p) for p in existing)
 
             # Check overlap
@@ -241,12 +246,14 @@ def deduplicate_paths(paths: list) -> list:
                 # More than 80% overlap - consider duplicate
                 # Keep the longer path
                 if len(path) > len(existing):
-                    unique_paths.remove(existing)
-                    unique_paths.append(path)
+                    path_to_remove = existing
                 is_duplicate = True
                 break
 
-        if not is_duplicate:
+        if path_to_remove is not None:
+            unique_paths.remove(path_to_remove)
+            unique_paths.append(path)
+        elif not is_duplicate:
             unique_paths.append(path)
 
     return unique_paths
@@ -261,7 +268,7 @@ def simplify_path(path: list, tolerance: int = 3) -> list:
 
     for point in path[1:]:
         last = simplified[-1]
-        dist = ((point[0] - last[0])**2 + (point[1] - last[1])**2)**0.5
+        dist = ((point[0] - last[0]) ** 2 + (point[1] - last[1]) ** 2) ** 0.5
         if dist >= tolerance:
             simplified.append(point)
 
@@ -272,7 +279,7 @@ def simplify_path(path: list, tolerance: int = 3) -> list:
     return simplified
 
 
-def generate_animated_guide_data(character: str, size: int = 400, font_name: str = None) -> dict:
+def generate_animated_guide_data(character: str, size: int = 400, font_name: Optional[str] = None) -> dict:
     """
     Generate stroke path data for animated guide.
     Returns paths that can be animated on the frontend.
@@ -312,21 +319,12 @@ def generate_animated_guide_data(character: str, size: int = 400, font_name: str
         # Convert to percentage coordinates (0-100)
         normalized_path = [[p[0] * 100 / size, p[1] * 100 / size] for p in path]
 
-        strokes.append({
-            "points": normalized_path,
-            "color": colors[i % len(colors)],
-            "order": i + 1
-        })
+        strokes.append({"points": normalized_path, "color": colors[i % len(colors)], "order": i + 1})
 
-    return {
-        "character": character,
-        "size": size,
-        "strokes": strokes,
-        "stroke_count": len(strokes)
-    }
+    return {"character": character, "size": size, "strokes": strokes, "stroke_count": len(strokes)}
 
 
-def generate_trace_image(character: str, size: int = 400, font_name: str = None) -> str:
+def generate_trace_image(character: str, size: int = 400, font_name: Optional[str] = None) -> str:
     """
     Generate a dashed trace image from the font's skeleton.
     Returns base64 encoded PNG with transparent background.
@@ -344,7 +342,7 @@ def generate_trace_image(character: str, size: int = 400, font_name: str = None)
     trace_line = binary_dilation(skeleton, iterations=3)
 
     # Create RGBA image
-    output = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    output = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     pixels = output.load()
 
     # Draw dashed line pattern
@@ -366,11 +364,11 @@ def generate_trace_image(character: str, size: int = 400, font_name: str = None)
             dash_counter = 0
 
     buffer = io.BytesIO()
-    output.save(buffer, format='PNG')
+    output.save(buffer, format="PNG")
     return f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"
 
 
-def generate_all_guides(character: str, size: int = 400, font_name: str = None) -> dict:
+def generate_all_guides(character: str, size: int = 400, font_name: Optional[str] = None) -> dict:
     """Generate all guide data for a character"""
     animated_data = generate_animated_guide_data(character, size, font_name)
 
@@ -380,7 +378,7 @@ def generate_all_guides(character: str, size: int = 400, font_name: str = None) 
         "font_name": font_name or "Fredoka-Regular",
         "trace_image": generate_trace_image(character, size, font_name),
         "animated_strokes": animated_data["strokes"],
-        "stroke_count": animated_data["stroke_count"]
+        "stroke_count": animated_data["stroke_count"],
     }
 
 
@@ -390,37 +388,37 @@ def generate_font_preview(font_name: str, size: int = 600) -> str:
     Returns base64 encoded PNG.
     """
     # Create image large enough for all characters
-    img = Image.new('RGB', (size, size), color='white')
+    img = Image.new("RGB", (size, size), color="white")
     draw = ImageDraw.Draw(img)
 
     font_size = int(size / 16)  # Smaller font to fit all chars
     font = get_font(font_size, font_name)
 
     # Characters to display
-    uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    lowercase = 'abcdefghijklmnopqrstuvwxyz'
-    numbers = '0123456789'
+    uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    lowercase = "abcdefghijklmnopqrstuvwxyz"
+    numbers = "0123456789"
 
     # Draw title
     title_font = get_font(int(font_size * 0.8), font_name)
-    draw.text((10, 10), f"Font: {font_name}", fill='#666', font=title_font)
+    draw.text((10, 10), f"Font: {font_name}", fill="#666", font=title_font)
 
     y_offset = int(size * 0.08)
     line_height = int(size * 0.12)
 
     # Draw uppercase (2 lines)
-    draw.text((10, y_offset), uppercase[:13], fill='black', font=font)
-    draw.text((10, y_offset + line_height), uppercase[13:], fill='black', font=font)
+    draw.text((10, y_offset), uppercase[:13], fill="black", font=font)
+    draw.text((10, y_offset + line_height), uppercase[13:], fill="black", font=font)
 
     # Draw lowercase (2 lines)
-    y_offset += line_height * 2.5
-    draw.text((10, y_offset), lowercase[:13], fill='black', font=font)
-    draw.text((10, y_offset + line_height), lowercase[13:], fill='black', font=font)
+    y_offset += int(line_height * 2.5)
+    draw.text((10, y_offset), lowercase[:13], fill="black", font=font)
+    draw.text((10, y_offset + line_height), lowercase[13:], fill="black", font=font)
 
     # Draw numbers (1 line)
-    y_offset += line_height * 2.5
-    draw.text((10, y_offset), numbers, fill='black', font=font)
+    y_offset += int(line_height * 2.5)
+    draw.text((10, y_offset), numbers, fill="black", font=font)
 
     buffer = io.BytesIO()
-    img.save(buffer, format='PNG')
+    img.save(buffer, format="PNG")
     return f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"

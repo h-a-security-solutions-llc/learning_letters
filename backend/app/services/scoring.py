@@ -1,33 +1,47 @@
+"""Scoring service for evaluating drawn characters against reference images."""
+
 import base64
 import io
-from PIL import Image, ImageDraw, ImageFont
+from typing import Optional
+
 import numpy as np
-from skimage.metrics import structural_similarity as ssim
-from skimage.transform import resize
-from skimage.morphology import skeletonize, medial_axis
-from scipy.ndimage import distance_transform_edt, binary_dilation
-from typing import Tuple
+from PIL import Image, ImageDraw, ImageFont
+from scipy.ndimage import binary_dilation, distance_transform_edt
+from skimage.morphology import medial_axis
+from skimage.transform import resize  # pylint: disable=no-name-in-module
 
 
-def generate_reference_image(character: str, size: int = 200) -> Image.Image:
-    """Generate a reference image for a character"""
-    img = Image.new('L', (size, size), color=255)
+def generate_reference_image(character: str, size: int = 200, font_name: Optional[str] = None) -> Image.Image:
+    """Generate a reference image for a character using the specified font"""
+    import os
+
+    img = Image.new("L", (size, size), color=255)
     draw = ImageDraw.Draw(img)
 
-    # Use Fredoka font to match frontend display (kid-friendly with proper letter shapes)
     font_size = int(size * 0.75)
     font = None
 
-    # First try our bundled Fredoka font (matches frontend exactly)
-    import os
-    bundled_font = os.path.join(os.path.dirname(__file__), '..', 'fonts', 'Fredoka-Regular.ttf')
-    bundled_font = os.path.abspath(bundled_font)
+    # Map font names to file names
+    font_file_map = {
+        "Fredoka-Regular": "Fredoka-Regular.ttf",
+        "Nunito-Regular": "Nunito-Regular.ttf",
+        "PlaywriteUS-Regular": "PlaywriteUS-Regular.ttf",
+        "PatrickHand-Regular": "PatrickHand-Regular.ttf",
+        "Schoolbell-Regular": "Schoolbell-Regular.ttf",
+    }
+
+    # Get the font file name (default to Fredoka)
+    font_file = font_file_map.get(font_name or "", "Fredoka-Regular.ttf")
+
+    # Build path to bundled font
+    fonts_dir = os.path.join(os.path.dirname(__file__), "..", "fonts")
+    bundled_font = os.path.abspath(os.path.join(fonts_dir, font_file))
 
     font_paths = [
         bundled_font,
-        # System Fredoka
-        "/usr/share/fonts/truetype/fredoka/Fredoka-Regular.ttf",
-        # Fallbacks
+        # Fallback to Fredoka if specified font not found
+        os.path.abspath(os.path.join(fonts_dir, "Fredoka-Regular.ttf")),
+        # System fallbacks
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/TTF/DejaVuSans.ttf",
     ]
@@ -36,11 +50,11 @@ def generate_reference_image(character: str, size: int = 200) -> Image.Image:
         try:
             font = ImageFont.truetype(font_path, font_size)
             break
-        except (OSError, IOError):
+        except OSError:
             continue
 
     if font is None:
-        font = ImageFont.load_default()
+        font = ImageFont.load_default()  # type: ignore[assignment]
 
     # Get text bounding box for centering
     bbox = draw.textbbox((0, 0), character, font=font)
@@ -61,8 +75,8 @@ def extract_and_center_character(image: Image.Image, target_size: int = 128, pad
     This ensures that size and position on the canvas don't affect scoring.
     """
     # Convert to grayscale if needed
-    if image.mode != 'L':
-        image = image.convert('L')
+    if image.mode != "L":
+        image = image.convert("L")
 
     img_array = np.array(image)
 
@@ -82,7 +96,7 @@ def extract_and_center_character(image: Image.Image, target_size: int = 128, pad
     col_min, col_max = np.where(cols)[0][[0, -1]]
 
     # Extract the character region
-    char_region = img_array[row_min:row_max+1, col_min:col_max+1]
+    char_region = img_array[row_min : row_max + 1, col_min : col_max + 1]
 
     # Calculate the size to fit within target with padding
     char_height, char_width = char_region.shape
@@ -104,7 +118,7 @@ def extract_and_center_character(image: Image.Image, target_size: int = 128, pad
     x_offset = (target_size - new_width) // 2
 
     # Place the resized character in the center
-    output[y_offset:y_offset+new_height, x_offset:x_offset+new_width] = char_resized
+    output[y_offset : y_offset + new_height, x_offset : x_offset + new_width] = char_resized
 
     # Normalize to 0-1 range
     output_normalized = (output - output.min()) / (output.max() - output.min() + 1e-8)
@@ -115,8 +129,8 @@ def extract_and_center_character(image: Image.Image, target_size: int = 128, pad
 def preprocess_image(image: Image.Image, target_size: int = 128) -> np.ndarray:
     """Preprocess image for comparison (legacy function for reference images)"""
     # Convert to grayscale if needed
-    if image.mode != 'L':
-        image = image.convert('L')
+    if image.mode != "L":
+        image = image.convert("L")
 
     # Convert to numpy array
     img_array = np.array(image)
@@ -149,8 +163,7 @@ def bridge_gaps(skeleton: np.ndarray, max_gap: int = 6) -> np.ndarray:
     Bridge small gaps between nearly-connected strokes.
     If an endpoint is within max_gap pixels of another stroke, connect them.
     """
-    from scipy.ndimage import distance_transform_edt
-    from skimage.draw import line
+    from skimage.draw import line  # pylint: disable=no-name-in-module,import-outside-toplevel
 
     result = skeleton.copy()
     endpoints = find_endpoints(skeleton)
@@ -227,8 +240,7 @@ def bridge_gaps(skeleton: np.ndarray, max_gap: int = 6) -> np.ndarray:
         if best_target is not None:
             rr, cc = line(ey, ex, best_target[0], best_target[1])
             # Only draw if all points are in bounds
-            if np.all(rr >= 0) and np.all(rr < result.shape[0]) and \
-               np.all(cc >= 0) and np.all(cc < result.shape[1]):
+            if np.all(rr >= 0) and np.all(rr < result.shape[0]) and np.all(cc >= 0) and np.all(cc < result.shape[1]):
                 result[rr, cc] = True
 
     return result
@@ -247,8 +259,6 @@ def sand_drawing(binary_img: np.ndarray, prune_length: int = 8, bridge_gap: int 
     2. Bridge small gaps between nearly-connected endpoints
     3. Prune short branches that represent overshoots (with over-pruning protection)
     """
-    from scipy.ndimage import label
-
     if not np.any(binary_img):
         return binary_img
 
@@ -310,7 +320,9 @@ def sand_drawing(binary_img: np.ndarray, prune_length: int = 8, bridge_gap: int 
     return pruned
 
 
-def normalize_line_thickness(binary_img: np.ndarray, target_thickness: int = 5, apply_sanding: bool = True) -> np.ndarray:
+def normalize_line_thickness(
+    binary_img: np.ndarray, target_thickness: int = 5, apply_sanding: bool = True
+) -> np.ndarray:
     """
     Normalize line thickness using medial axis for smoother centerlines,
     then use distance transform for smooth stroke reconstruction.
@@ -326,7 +338,7 @@ def normalize_line_thickness(binary_img: np.ndarray, target_thickness: int = 5, 
         skeleton = sand_drawing(binary_img, prune_length=8, bridge_gap=10)
     else:
         # Use medial_axis for smoother centerlines than skeletonize
-        skeleton, distance = medial_axis(binary_img, return_distance=True)
+        skeleton, _ = medial_axis(binary_img, return_distance=True)
 
     # Use distance transform for smooth stroke reconstruction
     # instead of binary dilation which creates blocky results
@@ -453,21 +465,22 @@ def calculate_stroke_similarity(drawn_img: np.ndarray, reference_img: np.ndarray
     return min(max(similarity, 0.0), 1.0)
 
 
-def score_drawing(drawn_image_data: str, character: str) -> dict:
+def score_drawing(drawn_image_data: str, character: str, font_name: Optional[str] = None) -> dict:
     """
     Score a drawn character against the reference.
 
     Args:
         drawn_image_data: Base64 encoded image data (data URL or raw base64)
         character: The character that was supposed to be drawn
+        font_name: The font to use for reference image (e.g., 'Fredoka-Regular')
 
     Returns:
         Dictionary with scores and reference image
     """
     # Parse the drawn image
-    if ',' in drawn_image_data:
+    if "," in drawn_image_data:
         # Data URL format
-        image_data = drawn_image_data.split(',')[1]
+        image_data = drawn_image_data.split(",")[1]
     else:
         image_data = drawn_image_data
 
@@ -477,8 +490,8 @@ def score_drawing(drawn_image_data: str, character: str) -> dict:
     except Exception as e:
         return {"error": f"Failed to decode image: {str(e)}"}
 
-    # Generate reference image
-    reference_image = generate_reference_image(character, size=200)
+    # Generate reference image using specified font
+    reference_image = generate_reference_image(character, size=200, font_name=font_name)
 
     # Preprocess images - extract and center the drawn character for fair comparison
     # This normalizes size and position so only shape quality matters
@@ -496,7 +509,7 @@ def score_drawing(drawn_image_data: str, character: str) -> dict:
         similarity = 0.5
 
     # Combined score with rebalanced weights for better similarity influence
-    combined_score = (coverage * 0.35 + accuracy * 0.35 + similarity * 0.30)
+    combined_score = coverage * 0.35 + accuracy * 0.35 + similarity * 0.30
 
     # Convert to percentage (no artificial inflation needed since line thickness is normalized)
     percentage_score = int(min(100, combined_score * 100))
@@ -521,17 +534,17 @@ def score_drawing(drawn_image_data: str, character: str) -> dict:
 
     # Convert reference image to base64 for response
     ref_buffer = io.BytesIO()
-    reference_image.save(ref_buffer, format='PNG')
-    ref_base64 = base64.b64encode(ref_buffer.getvalue()).decode('utf-8')
+    reference_image.save(ref_buffer, format="PNG")
+    ref_base64 = base64.b64encode(ref_buffer.getvalue()).decode("utf-8")
 
     # Generate debug images showing normalized versions
     def array_to_base64(arr: np.ndarray) -> str:
         # Convert normalized array (0-1, where dark=low) to image
         img_data = ((1 - arr) * 255).astype(np.uint8)  # Invert so strokes are black
-        img = Image.fromarray(img_data, mode='L')
+        img = Image.fromarray(img_data, mode="L")
         buf = io.BytesIO()
-        img.save(buf, format='PNG')
-        return base64.b64encode(buf.getvalue()).decode('utf-8')
+        img.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
 
     # Get the normalized versions for debug display
     drawn_binary = drawn_processed < 0.5
@@ -549,7 +562,7 @@ def score_drawing(drawn_image_data: str, character: str) -> dict:
         "details": {
             "coverage": round(coverage * 100, 1),
             "accuracy": round(accuracy * 100, 1),
-            "similarity": round(similarity * 100, 1)
+            "similarity": round(similarity * 100, 1),
         },
         "reference_image": f"data:image/png;base64,{ref_base64}",
         "debug": {
@@ -557,6 +570,6 @@ def score_drawing(drawn_image_data: str, character: str) -> dict:
             "drawn_sanded": f"data:image/png;base64,{array_to_base64(drawn_sanded.astype(float))}",
             "reference_normalized": f"data:image/png;base64,{array_to_base64(reference_normalized.astype(float))}",
             "drawn_centered": f"data:image/png;base64,{array_to_base64(drawn_processed)}",
-            "reference_centered": f"data:image/png;base64,{array_to_base64(reference_processed)}"
-        }
+            "reference_centered": f"data:image/png;base64,{array_to_base64(reference_processed)}",
+        },
     }

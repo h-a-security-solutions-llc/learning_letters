@@ -12,8 +12,12 @@
           ★
         </span>
       </div>
-      <div class="score-number">{{ scoreData.score }}%</div>
-      <div class="feedback">{{ scoreData.feedback }}</div>
+      <div class="score-number">
+        {{ scoreData.score }}%
+      </div>
+      <div class="feedback">
+        {{ scoreData.feedback }}
+      </div>
     </div>
 
     <!-- Comparison Display -->
@@ -21,7 +25,7 @@
       <div class="comparison-item">
         <h3>Your Drawing</h3>
         <div class="image-container">
-          <img :src="userDrawing" alt="Your drawing" />
+          <img :src="userDrawing" alt="Your drawing">
         </div>
       </div>
 
@@ -32,7 +36,7 @@
       <div class="comparison-item">
         <h3>Perfect Example</h3>
         <div class="image-container">
-          <img :src="scoreData.reference_image" alt="Perfect example" />
+          <img :src="scoreData.reference_image" alt="Perfect example">
         </div>
       </div>
     </div>
@@ -51,8 +55,10 @@
             <span>#{{ index + 1 }}</span>
             <span v-if="attempt.scoreResult.score === scoreData.score" class="best-badge">BEST</span>
           </div>
-          <img :src="attempt.imageData" alt="Attempt drawing" />
-          <div class="attempt-score">{{ attempt.scoreResult.score }}%</div>
+          <img :src="attempt.imageData" alt="Attempt drawing">
+          <div class="attempt-score">
+            {{ attempt.scoreResult.score }}%
+          </div>
         </div>
       </div>
     </div>
@@ -60,26 +66,28 @@
     <!-- Debug Section - Normalized Images (controlled by Debug toggle in main controls) -->
     <div v-if="scoreData.debug && showDebugMode" class="debug-section">
       <h3>How Your Drawing Was Processed</h3>
-      <p class="debug-explanation">These images show the transformations applied to your drawing before scoring:</p>
+      <p class="debug-explanation">
+        These images show the transformations applied to your drawing before scoring:
+      </p>
       <div class="debug-grid">
         <div class="debug-item">
           <span>1. Centered</span>
-          <img :src="scoreData.debug.drawn_centered" alt="Centered drawing" />
+          <img :src="scoreData.debug.drawn_centered" alt="Centered drawing">
           <small>Position normalized</small>
         </div>
         <div class="debug-item">
           <span>2. Before Sanding</span>
-          <img :src="scoreData.debug.drawn_unsanded" alt="Before sanding" />
+          <img :src="scoreData.debug.drawn_unsanded" alt="Before sanding">
           <small>Line thickness normalized</small>
         </div>
         <div class="debug-item">
           <span>3. After Sanding</span>
-          <img :src="scoreData.debug.drawn_sanded" alt="After sanding" />
+          <img :src="scoreData.debug.drawn_sanded" alt="After sanding">
           <small>Minor overshoots removed</small>
         </div>
         <div class="debug-item highlight">
           <span>Perfect Target</span>
-          <img :src="scoreData.debug.reference_normalized" alt="Reference target" />
+          <img :src="scoreData.debug.reference_normalized" alt="Reference target">
           <small>What we compare against</small>
         </div>
       </div>
@@ -104,10 +112,12 @@
 
     <!-- Character Info -->
     <div class="character-info-section">
-      <div class="character-large">{{ character }}</div>
+      <div class="character-large">
+        {{ character }}
+      </div>
       <div class="pronunciation">
-        <button class="speak-btn" @click="speakCharacter">
-          <span class="speaker-icon">🔊</span>
+        <button class="speak-btn" :aria-label="`Play pronunciation of ${character}`" @click="speakCharacter">
+          <span class="speaker-icon" aria-hidden="true">🔊</span>
           <span>Hear it!</span>
         </button>
       </div>
@@ -115,22 +125,23 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
-      <button class="action-btn try-again-btn" @click="$emit('try-again')">
-        <span class="btn-icon">🔄</span>
+      <button class="action-btn try-again-btn" aria-label="Try again" @click="$emit('try-again')">
+        <span class="btn-icon" aria-hidden="true">🔄</span>
         <span>Try Again</span>
       </button>
 
-      <button class="action-btn next-btn" @click="$emit('next')">
-        <span class="btn-icon">➡️</span>
-        <span>Next Letter</span>
+      <button class="action-btn next-btn" :aria-label="`Next ${charType === 'number' ? 'number' : 'letter'}`" @click="$emit('next')">
+        <span class="btn-icon" aria-hidden="true">➡️</span>
+        <span>Next {{ charType === 'number' ? 'Number' : 'Letter' }}</span>
       </button>
     </div>
   </div>
 </template>
 
 <script>
-import { onMounted, ref, toRefs } from 'vue'
+import { onMounted, ref, toRefs, computed } from 'vue'
 import axios from 'axios'
+import { apiUrl } from '@/config/api'
 
 export default {
   name: 'ResultsDisplay',
@@ -158,16 +169,37 @@ export default {
     showDebugMode: {
       type: Boolean,
       default: false
+    },
+    voiceGender: {
+      type: String,
+      default: 'rachel'
+    },
+    autoPlaySound: {
+      type: Boolean,
+      default: true
+    },
+    audioSpeed: {
+      type: Number,
+      default: 1.0
+    },
+    enableCaptions: {
+      type: Boolean,
+      default: false
     }
   },
-  emits: ['try-again', 'next'],
-  setup(props) {
+  emits: ['try-again', 'next', 'play-audio'],
+  setup(props, { emit }) {
     const { showDebugMode } = toRefs(props)
+
+    const charType = computed(() => {
+      if (/[0-9]/.test(props.character)) return 'number'
+      return 'letter'
+    })
     const characterData = ref(null)
 
     const fetchCharacterData = async () => {
       try {
-        const response = await axios.get(`/api/characters/${encodeURIComponent(props.character)}`)
+        const response = await axios.get(apiUrl(`/api/characters/${encodeURIComponent(props.character)}`))
         characterData.value = response.data
       } catch (error) {
         console.error('Failed to fetch character data:', error)
@@ -175,80 +207,26 @@ export default {
     }
 
     const speakCharacter = () => {
-      if (!('speechSynthesis' in window)) {
-        alert('Sorry, your browser does not support speech!')
-        return
-      }
-
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel()
-
-      // Determine what to say
-      let textToSpeak = ''
-
-      if (/[A-Za-z]/.test(props.character)) {
-        // It's a letter
-        const letterName = props.character.toUpperCase()
-        const isUppercase = props.character === props.character.toUpperCase()
-
-        // Say the letter name
-        const nameUtterance = new SpeechSynthesisUtterance(
-          `${isUppercase ? 'Capital' : 'Lowercase'} ${letterName}`
-        )
-        nameUtterance.rate = 0.8
-        nameUtterance.pitch = 1.1
-
-        // Say the phonetic sound
-        if (characterData.value?.sound) {
-          textToSpeak = `${isUppercase ? 'Capital' : 'Lowercase'} ${letterName}. ${characterData.value.sound}`
-        } else {
-          textToSpeak = `${isUppercase ? 'Capital' : 'Lowercase'} ${letterName}`
-        }
-      } else {
-        // It's a number
-        textToSpeak = props.character
-      }
-
-      const utterance = new SpeechSynthesisUtterance(textToSpeak)
-      utterance.rate = 0.8
-      utterance.pitch = 1.1
-
-      // Try to use a child-friendly voice if available
-      const voices = window.speechSynthesis.getVoices()
-      const preferredVoice = voices.find(v =>
-        v.name.includes('Female') ||
-        v.name.includes('Samantha') ||
-        v.name.includes('Karen') ||
-        v.lang.startsWith('en')
-      )
-
-      if (preferredVoice) {
-        utterance.voice = preferredVoice
-      }
-
-      window.speechSynthesis.speak(utterance)
+      // Emit event for App.vue to handle (includes caption support)
+      emit('play-audio', props.character)
     }
 
     onMounted(() => {
       fetchCharacterData()
 
-      // Auto-play speech when results are shown
-      // Small delay to ensure voices are loaded
-      setTimeout(() => {
-        if (window.speechSynthesis.getVoices().length === 0) {
-          window.speechSynthesis.onvoiceschanged = () => {
-            speakCharacter()
-          }
-        } else {
+      // Auto-play audio when results are shown (if enabled)
+      if (props.autoPlaySound) {
+        setTimeout(() => {
           speakCharacter()
-        }
-      }, 500)
+        }, 500)
+      }
     })
 
     return {
       characterData,
       speakCharacter,
-      showDebugMode
+      showDebugMode,
+      charType
     }
   }
 }

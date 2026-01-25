@@ -3,102 +3,52 @@
     <!-- Character Display -->
     <div class="character-display">
       <span class="current-char">{{ character }}</span>
-      <button class="play-sound-btn" @click="playAudio" :disabled="isPlayingAudio" title="Play pronunciation">
-        <span class="play-icon">{{ isPlayingAudio ? '...' : '🔊' }}</span>
+      <button
+        class="play-sound-btn"
+        title="Play pronunciation"
+        :aria-label="`Play pronunciation of ${character}`"
+        @click="playAudio"
+      >
+        <span class="play-icon" aria-hidden="true">🔊</span>
       </button>
       <div class="char-info-container">
-        <span class="char-info">Draw this {{ charType }}!</span>
+        <!-- Player Turn Indicator (Multiplayer) - replaces default prompt -->
+        <template v-if="playerName">
+          <span class="char-info player-turn">{{ playerName }}'s Turn</span>
+          <span class="turn-progress">({{ playerNumber }} of {{ totalPlayers }})</span>
+        </template>
+        <template v-else>
+          <span class="char-info">Draw this {{ charType }}!</span>
+        </template>
         <span v-if="bestOf3Mode" class="attempt-indicator">
           Attempt {{ currentAttempt }} of 3
           <span class="attempt-dots">
-            <span v-for="i in 3" :key="i" class="attempt-dot" :class="{ filled: i <= attempts.length, current: i === currentAttempt }"></span>
+            <span
+              v-for="i in 3"
+              :key="i"
+              class="attempt-dot"
+              :class="{ filled: i <= attempts.length, current: i === currentAttempt }"
+            />
           </span>
         </span>
       </div>
     </div>
 
     <!-- Canvas Area -->
-    <div class="canvas-wrapper" ref="canvasWrapper">
-      <!-- Animated Guide Layer (from auto-generated font data) -->
-      <svg
-        v-if="tracingMode && generatedGuide?.animated_strokes"
-        class="tracing-layer"
-        :viewBox="`0 0 100 100`"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        <!-- Animated stroke paths - each stroke appears one at a time -->
-        <g v-for="(stroke, index) in generatedGuide.animated_strokes" :key="index">
-          <polyline
-            v-if="index < animationStep"
-            :points="stroke.points.map(p => p.join(',')).join(' ')"
-            fill="none"
-            :stroke="stroke.color"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="animated-stroke"
-            :style="{ animationDelay: `${index * 0.1}s` }"
-          />
-          <!-- Start marker with number -->
-          <g v-if="index < animationStep && stroke.points.length > 0">
-            <!-- Outer ring for first stroke -->
-            <circle
-              v-if="index === 0"
-              :cx="stroke.points[0][0]"
-              :cy="stroke.points[0][1]"
-              r="6"
-              fill="none"
-              :stroke="stroke.color"
-              stroke-width="1"
-              class="start-marker-ring"
-            />
-            <!-- Start marker circle -->
-            <circle
-              :cx="stroke.points[0][0]"
-              :cy="stroke.points[0][1]"
-              :r="index === 0 ? 4 : 3"
-              :fill="stroke.color"
-              :class="index === 0 ? 'start-marker-first' : 'start-marker'"
-            />
-            <!-- Number label -->
-            <text
-              :x="stroke.points[0][0]"
-              :y="stroke.points[0][1] + 1.2"
-              text-anchor="middle"
-              fill="white"
-              font-size="3"
-              font-weight="bold"
-            >
-              {{ stroke.order }}
-            </text>
-            <!-- Direction arrow at end -->
-            <polygon
-              v-if="stroke.points.length >= 2"
-              :points="getGeneratedArrowPoints(stroke.points)"
-              :fill="stroke.color"
-            />
-          </g>
-        </g>
-        <!-- Replay button when animation complete -->
-        <g v-if="!isAnimating && animationStep > 0" class="replay-hint">
-          <text x="50" y="95" text-anchor="middle" fill="#666" font-size="3">
-            Tap "Show Guide" to replay
-          </text>
-        </g>
-      </svg>
-
+    <div ref="canvasWrapper" class="canvas-wrapper">
       <!-- Trace Image Overlay (dashed lines from font skeleton) -->
       <img
-        v-if="dashTracingMode && generatedGuide?.trace_image"
+        v-if="showTraceOverlay"
         :src="generatedGuide.trace_image"
         class="trace-overlay"
         alt="Trace guide"
-      />
+      >
 
       <!-- Guided Mode Layer (step-by-step instruction) -->
       <svg
         v-if="guidedMode && guidedStrokes"
         class="guided-layer"
+        :class="{ 'high-contrast': highContrastMode }"
         :viewBox="`0 0 ${canvasSize} ${canvasSize}`"
         preserveAspectRatio="xMidYMid meet"
       >
@@ -108,7 +58,7 @@
           :key="'completed-' + index"
           :points="stroke.points.map(p => p.join(',')).join(' ')"
           fill="none"
-          :stroke="stroke.color"
+          :stroke="guidedColors.pathColor || stroke.color"
           stroke-width="4"
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -121,7 +71,7 @@
           <polyline
             :points="currentGuidedStroke.points.map(p => p.join(',')).join(' ')"
             fill="none"
-            :stroke="currentGuidedStroke.color"
+            :stroke="guidedColors.pathColor || currentGuidedStroke.color"
             stroke-width="4"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -129,24 +79,45 @@
             class="guided-path"
           />
 
-          <!-- Start zone - stable green circle with glowing ring -->
+          <!-- Start zone - stable circle with glowing ring -->
           <!-- Outer ring shows acceptable start area -->
           <circle
             :cx="currentGuidedStroke.start_zone.x"
             :cy="currentGuidedStroke.start_zone.y"
-            :r="currentGuidedStroke.start_zone.radius * 0.5"
-            fill="rgba(76, 175, 80, 0.1)"
-            stroke="#4CAF50"
+            :r="currentGuidedStroke.start_zone.radius * displayMultiplier"
+            :fill="guidedColors.startFill"
+            :stroke="guidedColors.startStroke"
             stroke-width="2"
             stroke-dasharray="8,4"
             class="start-zone-ring"
+          />
+          <!-- Color blind mode: concentric rings pattern for start zone -->
+          <circle
+            v-if="showShapeIndicators"
+            :cx="currentGuidedStroke.start_zone.x"
+            :cy="currentGuidedStroke.start_zone.y"
+            :r="currentGuidedStroke.start_zone.radius * displayMultiplier * 0.7"
+            fill="none"
+            :stroke="guidedColors.startStroke"
+            stroke-width="2"
+            opacity="0.6"
+          />
+          <circle
+            v-if="showShapeIndicators"
+            :cx="currentGuidedStroke.start_zone.x"
+            :cy="currentGuidedStroke.start_zone.y"
+            :r="currentGuidedStroke.start_zone.radius * displayMultiplier * 0.4"
+            fill="none"
+            :stroke="guidedColors.startStroke"
+            stroke-width="2"
+            opacity="0.6"
           />
           <!-- Center dot - the target to aim for (stays perfectly still) -->
           <circle
             :cx="currentGuidedStroke.start_zone.x"
             :cy="currentGuidedStroke.start_zone.y"
             r="14"
-            fill="#4CAF50"
+            :fill="guidedColors.startDotFill"
             class="start-zone-dot"
           />
           <!-- Stroke number -->
@@ -154,7 +125,7 @@
             :x="currentGuidedStroke.start_zone.x"
             :y="currentGuidedStroke.start_zone.y + 5"
             text-anchor="middle"
-            fill="white"
+            :fill="guidedColors.startTextFill"
             font-size="14"
             font-weight="bold"
           >
@@ -165,35 +136,50 @@
           <circle
             :cx="currentGuidedStroke.end_zone.x"
             :cy="currentGuidedStroke.end_zone.y"
-            :r="currentGuidedStroke.end_zone.radius * 0.5"
-            fill="rgba(255, 152, 0, 0.1)"
-            stroke="#FF9800"
+            :r="currentGuidedStroke.end_zone.radius * displayMultiplier"
+            :fill="guidedColors.endFill"
+            :stroke="guidedColors.endStroke"
             stroke-width="2"
             stroke-dasharray="8,4"
             class="end-zone-ring"
           />
+          <!-- Color blind mode: diamond shape overlay for end zone -->
+          <rect
+            v-if="showShapeIndicators"
+            :x="currentGuidedStroke.end_zone.x - currentGuidedStroke.end_zone.radius * displayMultiplier * 0.5"
+            :y="currentGuidedStroke.end_zone.y - currentGuidedStroke.end_zone.radius * displayMultiplier * 0.5"
+            :width="currentGuidedStroke.end_zone.radius * displayMultiplier"
+            :height="currentGuidedStroke.end_zone.radius * displayMultiplier"
+            :transform="`rotate(45 ${currentGuidedStroke.end_zone.x} ${currentGuidedStroke.end_zone.y})`"
+            fill="none"
+            :stroke="guidedColors.endStroke"
+            stroke-width="2"
+            opacity="0.7"
+          />
           <polygon
             :points="getGuidedArrowPoints(currentGuidedStroke.points)"
-            :fill="currentGuidedStroke.color"
+            :fill="guidedColors.pathColor || currentGuidedStroke.color"
             class="end-arrow"
           />
         </g>
 
-        <!-- Instruction text at bottom -->
-        <g v-if="currentGuidedStroke && !isGuidedComplete">
+        <!-- Instruction text at bottom (hidden while drawing) -->
+        <g v-if="currentGuidedStroke && !isGuidedComplete && !isDrawing">
           <rect
             :x="10"
             :y="canvasSize - 45"
             :width="canvasSize - 20"
             height="35"
             rx="8"
-            fill="rgba(0,0,0,0.7)"
+            :fill="guidedColors.instructionBg"
+            :stroke="guidedColors.instructionStroke"
+            stroke-width="2"
           />
           <text
             :x="canvasSize / 2"
             :y="canvasSize - 22"
             text-anchor="middle"
-            fill="white"
+            :fill="guidedColors.instructionText"
             font-size="14"
             font-weight="500"
           >
@@ -209,13 +195,15 @@
             :width="canvasSize / 2"
             height="60"
             rx="12"
-            fill="rgba(76, 175, 80, 0.9)"
+            :fill="guidedColors.completionBg"
+            :stroke="guidedColors.completionStroke"
+            stroke-width="2"
           />
           <text
             :x="canvasSize / 2"
             :y="canvasSize / 2 + 8"
             text-anchor="middle"
-            fill="white"
+            :fill="guidedColors.completionText"
             font-size="20"
             font-weight="bold"
           >
@@ -231,13 +219,15 @@
             :width="canvasSize / 2"
             height="50"
             rx="10"
-            :fill="strokeFeedback.valid ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 152, 0, 0.9)'"
+            :fill="strokeFeedback.valid ? guidedColors.feedbackValidBg : guidedColors.feedbackInvalidBg"
+            :stroke="strokeFeedback.valid ? guidedColors.feedbackValidStroke : guidedColors.feedbackInvalidStroke"
+            stroke-width="2"
           />
           <text
             :x="canvasSize / 2"
             :y="canvasSize / 2 + 6"
             text-anchor="middle"
-            fill="white"
+            :fill="strokeFeedback.valid ? guidedColors.feedbackValidText : guidedColors.feedbackInvalidText"
             font-size="16"
             font-weight="600"
           >
@@ -258,7 +248,7 @@
               completed: i <= currentStrokeStep,
               current: i === currentStrokeStep + 1
             }"
-          ></span>
+          />
         </div>
       </div>
 
@@ -266,6 +256,8 @@
       <canvas
         ref="canvas"
         class="drawing-canvas"
+        role="img"
+        :aria-label="`Drawing canvas for practicing the ${charType} ${character}`"
         @mousedown="startDrawing"
         @mousemove="draw"
         @mouseup="stopDrawing"
@@ -278,38 +270,61 @@
 
     <!-- Controls -->
     <div class="controls">
-      <button v-if="showGuideButton" class="control-btn trace-btn" :class="{ active: tracingMode }" @click="$emit('toggle-tracing')">
-        <span class="btn-icon">✏️</span>
-        <span class="btn-text">{{ tracingMode ? 'Hide Guide' : 'Show Guide' }}</span>
-      </button>
-
-      <button v-if="showTraceButton" class="control-btn dash-btn" :class="{ active: dashTracingMode }" @click="$emit('toggle-dash-tracing')">
-        <span class="btn-icon">✂️</span>
-        <span class="btn-text">{{ dashTracingMode ? 'Hide Trace' : 'Trace Mode' }}</span>
-      </button>
-
-      <button v-if="showBestOf3Button" class="control-btn best3-btn" :class="{ active: bestOf3Mode }" @click="$emit('toggle-best-of-3')">
-        <span class="btn-icon">🎯</span>
-        <span class="btn-text">{{ bestOf3Mode ? 'Best of 3: ON' : 'Best of 3' }}</span>
-      </button>
-
-      <button v-if="showDebugButton" class="control-btn debug-btn" :class="{ active: showDebugMode }" @click="$emit('toggle-debug-mode')">
-        <span class="btn-icon">🔍</span>
-        <span class="btn-text">{{ showDebugMode ? 'Debug: ON' : 'Debug' }}</span>
-      </button>
-
-      <button v-if="showStepByStepButton" class="control-btn step-btn" :class="{ active: guidedMode }" @click="$emit('toggle-guided')">
-        <span class="btn-icon">👆</span>
+      <button
+        v-if="showStepByStepButton"
+        class="control-btn step-btn"
+        :class="{ active: guidedMode }"
+        :aria-pressed="guidedMode"
+        aria-label="Step-by-step mode"
+        @click="$emit('toggle-guided')"
+      >
+        <span class="btn-icon" aria-hidden="true">👆</span>
         <span class="btn-text">{{ guidedMode ? 'Exit Steps' : 'Step-by-Step' }}</span>
       </button>
 
-      <button class="control-btn clear-btn" @click="clearCanvas">
-        <span class="btn-icon">🗑️</span>
+      <button
+        v-if="showTraceButton"
+        class="control-btn dash-btn"
+        :class="{ active: dashTracingMode }"
+        :aria-pressed="dashTracingMode"
+        aria-label="Trace mode"
+        @click="$emit('toggle-dash-tracing')"
+      >
+        <span class="btn-icon" aria-hidden="true">✂️</span>
+        <span class="btn-text">{{ dashTracingMode ? 'Hide Trace' : 'Trace Mode' }}</span>
+      </button>
+
+      <button
+        v-if="showBestOf3Button"
+        class="control-btn best3-btn"
+        :class="{ active: bestOf3Mode }"
+        :aria-pressed="bestOf3Mode"
+        aria-label="Best of 3 mode"
+        @click="$emit('toggle-best-of-3')"
+      >
+        <span class="btn-icon" aria-hidden="true">🎯</span>
+        <span class="btn-text">{{ bestOf3Mode ? 'Best of 3: ON' : 'Best of 3' }}</span>
+      </button>
+
+      <button
+        v-if="showDebugButton"
+        class="control-btn debug-btn"
+        :class="{ active: showDebugMode }"
+        :aria-pressed="showDebugMode"
+        aria-label="Debug mode"
+        @click="$emit('toggle-debug-mode')"
+      >
+        <span class="btn-icon" aria-hidden="true">🔍</span>
+        <span class="btn-text">{{ showDebugMode ? 'Debug: ON' : 'Debug' }}</span>
+      </button>
+
+      <button class="control-btn clear-btn" aria-label="Clear drawing" @click="clearCanvas">
+        <span class="btn-icon" aria-hidden="true">🗑️</span>
         <span class="btn-text">Clear</span>
       </button>
 
-      <button class="control-btn submit-btn" @click="submitDrawing" :disabled="isSubmitting">
-        <span class="btn-icon">{{ isSubmitting ? '⏳' : '✓' }}</span>
+      <button class="control-btn submit-btn" :disabled="isSubmitting" aria-label="Submit drawing" @click="submitDrawing">
+        <span class="btn-icon" aria-hidden="true">{{ isSubmitting ? '⏳' : '✓' }}</span>
         <span class="btn-text">{{ isSubmitting ? 'Checking...' : 'Done!' }}</span>
       </button>
     </div>
@@ -319,6 +334,7 @@
 <script>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick, toRefs } from 'vue'
 import axios from 'axios'
+import { apiUrl } from '@/config/api'
 
 export default {
   name: 'DrawingCanvas',
@@ -326,10 +342,6 @@ export default {
     character: {
       type: String,
       required: true
-    },
-    tracingMode: {
-      type: Boolean,
-      default: false
     },
     dashTracingMode: {
       type: Boolean,
@@ -352,10 +364,6 @@ export default {
       default: false
     },
     showTraceButton: {
-      type: Boolean,
-      default: true
-    },
-    showGuideButton: {
       type: Boolean,
       default: true
     },
@@ -386,9 +394,41 @@ export default {
     voiceGender: {
       type: String,
       default: 'female'
+    },
+    playerName: {
+      type: String,
+      default: null
+    },
+    playerNumber: {
+      type: Number,
+      default: null
+    },
+    totalPlayers: {
+      type: Number,
+      default: null
+    },
+    highContrastMode: {
+      type: Boolean,
+      default: false
+    },
+    strokeTolerance: {
+      type: Number,
+      default: 0.5
+    },
+    colorBlindMode: {
+      type: Boolean,
+      default: false
+    },
+    audioSpeed: {
+      type: Number,
+      default: 1.0
+    },
+    enableCaptions: {
+      type: Boolean,
+      default: false
     }
   },
-  emits: ['submit', 'toggle-tracing', 'toggle-dash-tracing', 'toggle-best-of-3', 'toggle-debug-mode', 'toggle-guided', 'stroke-completed', 'reset-guided-progress', 'guided-complete'],
+  emits: ['submit', 'toggle-dash-tracing', 'toggle-best-of-3', 'toggle-debug-mode', 'toggle-guided', 'stroke-completed', 'reset-guided-progress', 'guided-complete', 'play-audio'],
   setup(props, { emit }) {
     const { showDebugMode } = toRefs(props)
     const canvas = ref(null)
@@ -400,9 +440,6 @@ export default {
     const lastY = ref(0)
     const canvasSize = ref(400)
     const generatedGuide = ref(null)
-    const animationStep = ref(0)
-    const isAnimating = ref(false)
-    const isPlayingAudio = ref(false)
 
     // Guided mode state
     const guidedStrokes = ref(null)
@@ -411,24 +448,18 @@ export default {
     const isValidating = ref(false)
     const canvasStateBeforeStroke = ref(null)  // Save state to restore on failed stroke
 
-    const playAudio = async () => {
-      if (isPlayingAudio.value) return
-
-      isPlayingAudio.value = true
-      try {
-        const audio = new Audio(`/api/audio/${encodeURIComponent(props.character)}?voice=${props.voiceGender}`)
-        audio.onended = () => {
-          isPlayingAudio.value = false
-        }
-        audio.onerror = () => {
-          isPlayingAudio.value = false
-        }
-        await audio.play()
-      } catch (error) {
-        console.error('Failed to play audio:', error)
-        isPlayingAudio.value = false
-      }
+    const playAudio = () => {
+      // Emit event for App.vue to handle (includes caption support)
+      emit('play-audio', props.character)
     }
+
+    // Computed for stroke tolerance display multiplier
+    const displayMultiplier = computed(() => props.strokeTolerance || 0.5)
+
+    // Computed for showing shape indicators (color blind support)
+    const showShapeIndicators = computed(() =>
+      props.colorBlindMode || props.highContrastMode
+    )
 
     const charType = computed(() => {
       if (/[A-Z]/.test(props.character)) return 'uppercase letter'
@@ -436,21 +467,21 @@ export default {
       return 'number'
     })
 
+    // Computed property for showing trace overlay - ensures reactivity
+    const showTraceOverlay = computed(() => {
+      return props.dashTracingMode && generatedGuide.value?.trace_image
+    })
+
     const fetchStrokeData = async () => {
       try {
         // Build guide URL with optional font parameter
-        let guideUrl = `/api/characters/${encodeURIComponent(props.character)}/guides?size=${canvasSize.value}`
+        let guideUrl = apiUrl(`/api/characters/${encodeURIComponent(props.character)}/guides?size=${canvasSize.value}`)
         if (props.selectedFont) {
           guideUrl += `&font=${encodeURIComponent(props.selectedFont)}`
         }
 
         const guideResponse = await axios.get(guideUrl)
         generatedGuide.value = guideResponse.data
-
-        // Start animation when guide is loaded
-        if (props.tracingMode && generatedGuide.value?.animated_strokes) {
-          startGuideAnimation()
-        }
       } catch (error) {
         console.error('Failed to fetch guide data:', error)
       }
@@ -458,7 +489,11 @@ export default {
 
     const fetchGuidedStrokes = async () => {
       try {
-        const response = await axios.get(`/api/characters/${encodeURIComponent(props.character)}/guided-strokes?size=${canvasSize.value}`)
+        let url = apiUrl(`/api/characters/${encodeURIComponent(props.character)}/guided-strokes?size=${canvasSize.value}`)
+        if (props.selectedFont) {
+          url += `&font=${encodeURIComponent(props.selectedFont)}`
+        }
+        const response = await axios.get(url)
         guidedStrokes.value = response.data
       } catch (error) {
         console.error('Failed to fetch guided strokes:', error)
@@ -473,10 +508,12 @@ export default {
       isValidating.value = true
       try {
         const response = await axios.post(
-          `/api/characters/${encodeURIComponent(props.character)}/validate-stroke`,
+          apiUrl(`/api/characters/${encodeURIComponent(props.character)}/validate-stroke`),
           {
             stroke_index: props.currentStrokeStep,
-            drawn_points: userStrokePoints.value
+            drawn_points: userStrokePoints.value,
+            font: props.selectedFont || null,
+            tolerance_multiplier: props.strokeTolerance * 2  // Convert 0.5/0.75/1.0 to 1.0/1.5/2.0
           }
         )
         return response.data
@@ -503,28 +540,63 @@ export default {
       return props.currentStrokeStep >= guidedStrokes.value.strokes.length
     })
 
-    const startGuideAnimation = () => {
-      if (!generatedGuide.value?.animated_strokes?.length) return
-
-      animationStep.value = 0
-      isAnimating.value = true
-
-      const animateNextStroke = () => {
-        if (animationStep.value < generatedGuide.value.animated_strokes.length) {
-          animationStep.value++
-          setTimeout(animateNextStroke, 800) // 800ms between strokes
-        } else {
-          isAnimating.value = false
+    // High contrast mode colors for guided mode
+    // Note: Canvas background is WHITE, so high contrast uses BLACK for visibility
+    const guidedColors = computed(() => {
+      if (props.highContrastMode) {
+        return {
+          // Start zone (high contrast: black on white canvas)
+          startFill: 'rgba(0, 0, 0, 0.1)',
+          startStroke: '#000000',
+          startDotFill: '#000000',
+          startTextFill: '#FFFFFF',
+          // End zone (high contrast: black on white canvas)
+          endFill: 'rgba(0, 0, 0, 0.1)',
+          endStroke: '#000000',
+          // Instruction text
+          instructionBg: 'rgba(0, 0, 0, 0.9)',
+          instructionText: '#FFFFFF',
+          instructionStroke: '#000000',
+          // Completion message
+          completionBg: 'rgba(0, 0, 0, 0.95)',
+          completionText: '#FFFFFF',
+          completionStroke: '#000000',
+          // Feedback colors (high contrast)
+          feedbackValidBg: 'rgba(0, 0, 0, 0.95)',
+          feedbackInvalidBg: 'rgba(128, 0, 0, 0.95)',
+          feedbackValidText: '#FFFFFF',
+          feedbackInvalidText: '#FFFFFF',
+          feedbackValidStroke: '#000000',
+          feedbackInvalidStroke: '#800000',
+          // Path color override (for dashed guide) - BLACK on white canvas
+          pathColor: '#000000'
         }
       }
-
-      animateNextStroke()
-    }
-
-    const resetAnimation = () => {
-      animationStep.value = 0
-      isAnimating.value = false
-    }
+      return {
+        // Normal mode colors (green and orange)
+        startFill: 'rgba(76, 175, 80, 0.1)',
+        startStroke: '#4CAF50',
+        startDotFill: '#4CAF50',
+        startTextFill: 'white',
+        endFill: 'rgba(255, 152, 0, 0.1)',
+        endStroke: '#FF9800',
+        instructionBg: 'rgba(0, 0, 0, 0.7)',
+        instructionText: 'white',
+        completionBg: 'rgba(76, 175, 80, 0.9)',
+        completionText: 'white',
+        completionStroke: 'none',
+        // Feedback colors (normal)
+        feedbackValidBg: 'rgba(76, 175, 80, 0.9)',
+        feedbackInvalidBg: 'rgba(255, 152, 0, 0.9)',
+        feedbackValidText: 'white',
+        feedbackInvalidText: 'white',
+        feedbackValidStroke: 'none',
+        feedbackInvalidStroke: 'none',
+        // Instruction box
+        instructionStroke: 'none',
+        pathColor: null  // Use stroke's own color
+      }
+    })
 
     const setupCanvas = () => {
       if (!canvas.value || !canvasWrapper.value) return
@@ -709,9 +781,10 @@ export default {
       try {
         const imageData = canvas.value.toDataURL('image/png')
 
-        const response = await axios.post('/api/score', {
+        const response = await axios.post(apiUrl('/api/score'), {
           image_data: imageData,
-          character: props.character
+          character: props.character,
+          font: props.selectedFont || null
         })
 
         emit('submit', {
@@ -866,9 +939,14 @@ export default {
     }
 
     onMounted(() => {
-      nextTick(() => {
+      nextTick(async () => {
         setupCanvas()
-        fetchStrokeData()
+        // Always fetch stroke/guide data on mount
+        await fetchStrokeData()
+        // If guided mode is already enabled on mount, fetch guided strokes
+        if (props.guidedMode) {
+          fetchGuidedStrokes()
+        }
       })
 
       window.addEventListener('resize', setupCanvas)
@@ -897,26 +975,14 @@ export default {
       }
     })
 
-    watch(() => props.dashTracingMode, async () => {
-      // Fetch guide data if not yet loaded
-      if (props.dashTracingMode && !generatedGuide.value) {
+    watch(() => props.dashTracingMode, async (newVal) => {
+      // Fetch guide data if trace mode is enabled and we don't have the trace image
+      if (newVal && (!generatedGuide.value || !generatedGuide.value.trace_image)) {
         await fetchStrokeData()
       }
       nextTick(() => {
         clearCanvas()
       })
-    })
-
-    // Restart animation when guide mode is toggled
-    watch(() => props.tracingMode, async () => {
-      if (props.tracingMode) {
-        if (!generatedGuide.value) {
-          await fetchStrokeData()
-        }
-        startGuideAnimation()
-      } else {
-        resetAnimation()
-      }
     })
 
     // Clear canvas when attempt changes (best of 3 mode)
@@ -926,9 +992,31 @@ export default {
       })
     })
 
-    // Refetch guides when font changes
+    // Clear canvas when guided mode step resets to 0 (Try Again)
+    watch(() => props.currentStrokeStep, (newVal, oldVal) => {
+      if (props.guidedMode && newVal === 0 && oldVal !== 0) {
+        nextTick(() => {
+          // Clear canvas without emitting reset (already reset by parent)
+          ctx.value.fillStyle = 'white'
+          ctx.value.fillRect(0, 0, canvas.value.width, canvas.value.height)
+          drawRuledLines(canvas.value.width)
+          userStrokePoints.value = []
+          strokeFeedback.value = null
+          canvasStateBeforeStroke.value = null
+        })
+      }
+    })
+
+    // Refetch guides and guided strokes when font changes
     watch(() => props.selectedFont, () => {
       fetchStrokeData()
+      if (props.guidedMode) {
+        fetchGuidedStrokes()
+        // Reset guided progress when font changes
+        userStrokePoints.value = []
+        strokeFeedback.value = null
+        emit('reset-guided-progress')
+      }
     })
 
     return {
@@ -937,10 +1025,9 @@ export default {
       canvasSize,
       charType,
       generatedGuide,
-      animationStep,
-      isAnimating,
+      showTraceOverlay,
+      isDrawing,
       isSubmitting,
-      isPlayingAudio,
       playAudio,
       startDrawing,
       draw,
@@ -953,8 +1040,6 @@ export default {
       getScaledPoints,
       getArrowPoints,
       getGeneratedArrowPoints,
-      startGuideAnimation,
-      resetAnimation,
       showDebugMode,
       // Guided mode
       guidedStrokes,
@@ -964,8 +1049,11 @@ export default {
       currentGuidedStroke,
       completedGuidedStrokes,
       isGuidedComplete,
+      guidedColors,
       fetchGuidedStrokes,
-      getGuidedArrowPoints
+      getGuidedArrowPoints,
+      displayMultiplier,
+      showShapeIndicators
     }
   }
 }
@@ -1072,6 +1160,17 @@ export default {
   box-shadow: 0 0 8px #FFE66D;
 }
 
+/* Player Turn Indicator (inline in character display) */
+.char-info.player-turn {
+  color: #FFE66D;
+  font-weight: 700;
+}
+
+.turn-progress {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
 .canvas-wrapper {
   flex: 1;
   display: flex;
@@ -1079,16 +1178,6 @@ export default {
   justify-content: center;
   position: relative;
   min-height: 200px;
-}
-
-.tracing-layer {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  max-width: 500px;
-  max-height: 500px;
-  pointer-events: none;
-  z-index: 1;
 }
 
 .trace-overlay {
@@ -1100,67 +1189,6 @@ export default {
   pointer-events: none;
   z-index: 1;
   object-fit: contain;
-}
-
-.animated-stroke {
-  animation: strokeFadeIn 0.5s ease-out forwards;
-}
-
-@keyframes strokeFadeIn {
-  from {
-    opacity: 0;
-    stroke-width: 1;
-  }
-  to {
-    opacity: 1;
-    stroke-width: 3;
-  }
-}
-
-.stroke-path {
-  animation: dash 2s linear infinite;
-}
-
-@keyframes dash {
-  to {
-    stroke-dashoffset: -50;
-  }
-}
-
-.start-marker {
-  animation: pulse 1s ease-in-out infinite;
-}
-
-.start-marker-first {
-  animation: pulse-first 0.8s ease-in-out infinite;
-}
-
-.start-marker-ring {
-  animation: ring-pulse 1s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.8; }
-}
-
-@keyframes pulse-first {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-@keyframes ring-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.3); opacity: 0.5; }
-}
-
-.direction-arrow {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .drawing-canvas {
@@ -1297,6 +1325,19 @@ export default {
   filter: drop-shadow(0 0 4px #4CAF50);
 }
 
+.guided-layer.high-contrast .start-zone-dot {
+  filter: drop-shadow(0 0 6px #000000);
+}
+
+.guided-layer.high-contrast .guided-path {
+  stroke-width: 6;
+}
+
+.guided-layer.high-contrast .start-zone-ring,
+.guided-layer.high-contrast .end-zone-ring {
+  stroke-width: 3;
+}
+
 @keyframes glow-ring {
   0%, 100% {
     opacity: 1;
@@ -1409,6 +1450,10 @@ export default {
 
   .btn-icon {
     font-size: 1.5rem;
+  }
+
+  .turn-progress {
+    font-size: 0.8rem;
   }
 }
 </style>

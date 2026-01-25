@@ -1,0 +1,14 @@
+---
+exclude_dirs:
+  [
+    "tests",
+    "reports",
+    ".vscode",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".github",
+  ]
+
+skips:
+  - B101  # Test for use of assert
+  - B110  # Try, Except, Pass detected

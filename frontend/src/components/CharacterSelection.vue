@@ -1,12 +1,15 @@
 <template>
   <div class="selection-container">
     <!-- Category Tabs -->
-    <div class="category-tabs">
+    <div class="category-tabs" role="tablist" aria-label="Character category selection">
       <button
         v-for="category in categories"
         :key="category.id"
+        role="tab"
         :class="['category-tab', { active: activeCategory === category.id }]"
         :style="{ '--tab-color': category.color }"
+        :aria-selected="activeCategory === category.id"
+        :aria-controls="`${category.id}-panel`"
         @click="activeCategory = category.id"
       >
         {{ category.label }}
@@ -14,13 +17,20 @@
     </div>
 
     <!-- Character Grid -->
-    <div class="character-grid-container">
-      <div class="character-grid">
+    <div
+      :id="`${activeCategory}-panel`"
+      class="character-grid-container"
+      role="tabpanel"
+      :aria-label="`${activeCategory} characters`"
+    >
+      <div class="character-grid" role="list">
         <button
           v-for="char in currentCharacters"
           :key="char"
+          role="listitem"
           class="character-button"
-          :style="{ '--char-color': getCharColor(char) }"
+          :style="{ '--char-color': getCharColor(char), fontFamily: fontFamily }"
+          :aria-label="getCharacterLabel(char)"
           @click="$emit('select-character', char)"
         >
           {{ char }}
@@ -36,12 +46,19 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { apiUrl } from '@/config/api'
 
 export default {
   name: 'CharacterSelection',
+  props: {
+    selectedFont: {
+      type: String,
+      default: 'Fredoka-Regular'
+    }
+  },
   emits: ['select-character'],
-  setup() {
+  setup(props) {
     const categories = [
       { id: 'uppercase', label: 'A B C', color: '#FF6B6B' },
       { id: 'lowercase', label: 'a b c', color: '#4ECDC4' },
@@ -78,11 +95,77 @@ export default {
       return colors[index]
     }
 
+    const getCharacterLabel = (char) => {
+      if (/[A-Z]/.test(char)) {
+        return `Uppercase letter ${char}`
+      } else if (/[a-z]/.test(char)) {
+        return `Lowercase letter ${char}`
+      } else {
+        return `Number ${char}`
+      }
+    }
+
+    // Font loading for character display
+    const fontFamily = computed(() => {
+      // Map font file names to CSS font family names
+      const fontMap = {
+        'Fredoka-Regular': 'Fredoka',
+        'Nunito-Regular': 'Nunito',
+        'PlaywriteUS-Regular': 'PlaywriteUS',
+        'PatrickHand-Regular': 'PatrickHand',
+        'Schoolbell-Regular': 'Schoolbell'
+      }
+      return fontMap[props.selectedFont] || 'Fredoka'
+    })
+
+    const loadFont = (fontName) => {
+      // Create @font-face rule dynamically
+      const fontMap = {
+        'Fredoka-Regular': { family: 'Fredoka', file: 'Fredoka-Regular.ttf' },
+        'Nunito-Regular': { family: 'Nunito', file: 'Nunito-Regular.ttf' },
+        'PlaywriteUS-Regular': { family: 'PlaywriteUS', file: 'PlaywriteUS-Regular.ttf' },
+        'PatrickHand-Regular': { family: 'PatrickHand', file: 'PatrickHand-Regular.ttf' },
+        'Schoolbell-Regular': { family: 'Schoolbell', file: 'Schoolbell-Regular.ttf' }
+      }
+
+      const fontInfo = fontMap[fontName]
+      if (!fontInfo) return
+
+      // Check if font is already loaded
+      const styleId = `font-${fontInfo.family}`
+      if (document.getElementById(styleId)) return
+
+      // Create style element with @font-face
+      const style = document.createElement('style')
+      style.id = styleId
+      style.textContent = `
+        @font-face {
+          font-family: '${fontInfo.family}';
+          src: url('${apiUrl(`/api/fonts/${fontInfo.file}`)}') format('truetype');
+          font-weight: normal;
+          font-style: normal;
+          font-display: swap;
+        }
+      `
+      document.head.appendChild(style)
+    }
+
+    // Load font on mount and when it changes
+    onMounted(() => {
+      loadFont(props.selectedFont)
+    })
+
+    watch(() => props.selectedFont, (newFont) => {
+      loadFont(newFont)
+    })
+
     return {
       categories,
       activeCategory,
       currentCharacters,
-      getCharColor
+      getCharColor,
+      getCharacterLabel,
+      fontFamily
     }
   }
 }
