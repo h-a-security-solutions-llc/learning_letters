@@ -1,0 +1,572 @@
+{
+  "font": "Schoolbell",
+  "version": "1.0",
+  "description": "Stroke definitions for Schoolbell font - playful handwriting with bouncy baseline",
+  "characters": {
+    "A": {
+      "type": "uppercase",
+      "phonetic": "ay",
+      "sound": "ah as in apple",
+      "strokes": [
+        {"points": [[50, 10], [15, 88]], "direction": "down-left"},
+        {"points": [[50, 10], [85, 88]], "direction": "down-right"},
+        {"points": [[28, 58], [72, 58]], "direction": "right"}
+      ]
+    },
+    "B": {
+      "type": "uppercase",
+      "phonetic": "bee",
+      "sound": "buh as in ball",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[22, 12], [55, 14], [68, 28], [65, 45], [52, 52], [22, 50]], "direction": "right-curve"},
+        {"points": [[22, 50], [58, 52], [72, 68], [68, 85], [52, 90], [22, 88]], "direction": "right-curve"}
+      ]
+    },
+    "C": {
+      "type": "uppercase",
+      "phonetic": "see",
+      "sound": "kuh as in cat",
+      "strokes": [
+        {"points": [[78, 25], [58, 10], [28, 22], [22, 50], [28, 78], [58, 90], [78, 75]], "direction": "curve-left"}
+      ]
+    },
+    "D": {
+      "type": "uppercase",
+      "phonetic": "dee",
+      "sound": "duh as in dog",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[22, 12], [52, 14], [75, 32], [75, 68], [52, 88], [22, 88]], "direction": "curve-right"}
+      ]
+    },
+    "E": {
+      "type": "uppercase",
+      "phonetic": "ee",
+      "sound": "eh as in elephant",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[22, 12], [75, 14]], "direction": "right"},
+        {"points": [[22, 50], [65, 52]], "direction": "right"},
+        {"points": [[22, 88], [75, 86]], "direction": "right"}
+      ]
+    },
+    "F": {
+      "type": "uppercase",
+      "phonetic": "ef",
+      "sound": "fuh as in fish",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[22, 12], [75, 14]], "direction": "right"},
+        {"points": [[22, 50], [58, 52]], "direction": "right"}
+      ]
+    },
+    "G": {
+      "type": "uppercase",
+      "phonetic": "jee",
+      "sound": "guh as in goat",
+      "strokes": [
+        {"points": [[78, 25], [58, 10], [28, 22], [22, 50], [28, 78], [58, 90], [78, 72], [78, 55], [55, 55]], "direction": "curve-in"}
+      ]
+    },
+    "H": {
+      "type": "uppercase",
+      "phonetic": "aych",
+      "sound": "huh as in hat",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[78, 12], [78, 88]], "direction": "down"},
+        {"points": [[22, 50], [78, 50]], "direction": "right"}
+      ]
+    },
+    "I": {
+      "type": "uppercase",
+      "phonetic": "eye",
+      "sound": "ih as in igloo",
+      "strokes": [
+        {"points": [[32, 12], [68, 12]], "direction": "right"},
+        {"points": [[50, 12], [50, 88]], "direction": "down"},
+        {"points": [[32, 88], [68, 88]], "direction": "right"}
+      ]
+    },
+    "J": {
+      "type": "uppercase",
+      "phonetic": "jay",
+      "sound": "juh as in jump",
+      "strokes": [
+        {"points": [[32, 12], [68, 12]], "direction": "right"},
+        {"points": [[55, 12], [55, 72], [42, 88], [25, 82]], "direction": "down-curve"}
+      ]
+    },
+    "K": {
+      "type": "uppercase",
+      "phonetic": "kay",
+      "sound": "kuh as in kite",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[75, 12], [22, 55]], "direction": "down-left"},
+        {"points": [[40, 48], [75, 88]], "direction": "down-right"}
+      ]
+    },
+    "L": {
+      "type": "uppercase",
+      "phonetic": "el",
+      "sound": "luh as in lion",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[22, 88], [75, 86]], "direction": "right"}
+      ]
+    },
+    "M": {
+      "type": "uppercase",
+      "phonetic": "em",
+      "sound": "muh as in moon",
+      "strokes": [
+        {"points": [[15, 88], [15, 12]], "direction": "up"},
+        {"points": [[15, 12], [50, 55]], "direction": "down-right"},
+        {"points": [[50, 55], [85, 12]], "direction": "up-right"},
+        {"points": [[85, 12], [85, 88]], "direction": "down"}
+      ]
+    },
+    "N": {
+      "type": "uppercase",
+      "phonetic": "en",
+      "sound": "nuh as in nest",
+      "strokes": [
+        {"points": [[22, 88], [22, 12]], "direction": "up"},
+        {"points": [[22, 12], [78, 88]], "direction": "down-right"},
+        {"points": [[78, 88], [78, 12]], "direction": "up"}
+      ]
+    },
+    "O": {
+      "type": "uppercase",
+      "phonetic": "oh",
+      "sound": "ah as in octopus",
+      "strokes": [
+        {"points": [[50, 10], [22, 28], [22, 72], [50, 90], [78, 72], [78, 28], [50, 10]], "direction": "oval"}
+      ]
+    },
+    "P": {
+      "type": "uppercase",
+      "phonetic": "pee",
+      "sound": "puh as in pig",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[22, 12], [58, 14], [75, 28], [72, 45], [58, 55], [22, 55]], "direction": "curve-right"}
+      ]
+    },
+    "Q": {
+      "type": "uppercase",
+      "phonetic": "kyoo",
+      "sound": "kwuh as in queen",
+      "strokes": [
+        {"points": [[50, 10], [22, 28], [22, 72], [50, 90], [78, 72], [78, 28], [50, 10]], "direction": "oval"},
+        {"points": [[58, 72], [85, 98]], "direction": "down-right"}
+      ]
+    },
+    "R": {
+      "type": "uppercase",
+      "phonetic": "ar",
+      "sound": "ruh as in rabbit",
+      "strokes": [
+        {"points": [[22, 12], [22, 88]], "direction": "down"},
+        {"points": [[22, 12], [58, 14], [75, 28], [58, 50], [22, 50]], "direction": "curve-right"},
+        {"points": [[50, 50], [78, 88]], "direction": "down-right"}
+      ]
+    },
+    "S": {
+      "type": "uppercase",
+      "phonetic": "ess",
+      "sound": "sss as in snake",
+      "strokes": [
+        {"points": [[72, 25], [55, 10], [32, 18], [28, 38], [40, 52], [62, 55], [72, 72], [62, 88], [42, 92], [25, 82]], "direction": "s-curve"}
+      ]
+    },
+    "T": {
+      "type": "uppercase",
+      "phonetic": "tee",
+      "sound": "tuh as in tiger",
+      "strokes": [
+        {"points": [[15, 12], [85, 14]], "direction": "right"},
+        {"points": [[50, 12], [50, 88]], "direction": "down"}
+      ]
+    },
+    "U": {
+      "type": "uppercase",
+      "phonetic": "yoo",
+      "sound": "uh as in umbrella",
+      "strokes": [
+        {"points": [[22, 12], [22, 72], [50, 90], [78, 72], [78, 12]], "direction": "down-curve-up"}
+      ]
+    },
+    "V": {
+      "type": "uppercase",
+      "phonetic": "vee",
+      "sound": "vuh as in van",
+      "strokes": [
+        {"points": [[15, 12], [50, 88]], "direction": "down-right"},
+        {"points": [[50, 88], [85, 12]], "direction": "up-right"}
+      ]
+    },
+    "W": {
+      "type": "uppercase",
+      "phonetic": "double-yoo",
+      "sound": "wuh as in water",
+      "strokes": [
+        {"points": [[10, 12], [25, 88]], "direction": "down-right"},
+        {"points": [[25, 88], [50, 42]], "direction": "up-right"},
+        {"points": [[50, 42], [75, 88]], "direction": "down-right"},
+        {"points": [[75, 88], [90, 12]], "direction": "up-right"}
+      ]
+    },
+    "X": {
+      "type": "uppercase",
+      "phonetic": "eks",
+      "sound": "ks as in box",
+      "strokes": [
+        {"points": [[15, 12], [85, 88]], "direction": "down-right"},
+        {"points": [[85, 12], [15, 88]], "direction": "down-left"}
+      ]
+    },
+    "Y": {
+      "type": "uppercase",
+      "phonetic": "why",
+      "sound": "yuh as in yellow",
+      "strokes": [
+        {"points": [[15, 12], [50, 50]], "direction": "down-right"},
+        {"points": [[85, 12], [50, 50]], "direction": "down-left"},
+        {"points": [[50, 50], [50, 88]], "direction": "down"}
+      ]
+    },
+    "Z": {
+      "type": "uppercase",
+      "phonetic": "zee",
+      "sound": "zzz as in zebra",
+      "strokes": [
+        {"points": [[15, 12], [85, 14]], "direction": "right"},
+        {"points": [[85, 14], [15, 86]], "direction": "down-left"},
+        {"points": [[15, 86], [85, 88]], "direction": "right"}
+      ]
+    },
+    "a": {
+      "type": "lowercase",
+      "phonetic": "ay",
+      "sound": "ah as in apple",
+      "strokes": [
+        {"points": [[68, 45], [48, 35], [32, 48], [32, 70], [48, 82], [68, 75]], "direction": "curve-left"},
+        {"points": [[68, 35], [68, 85]], "direction": "down"}
+      ]
+    },
+    "b": {
+      "type": "lowercase",
+      "phonetic": "bee",
+      "sound": "buh as in ball",
+      "strokes": [
+        {"points": [[28, 10], [28, 85]], "direction": "down"},
+        {"points": [[28, 52], [48, 38], [65, 52], [65, 70], [48, 85], [28, 72]], "direction": "curve-right"}
+      ]
+    },
+    "c": {
+      "type": "lowercase",
+      "phonetic": "see",
+      "sound": "kuh as in cat",
+      "strokes": [
+        {"points": [[68, 48], [52, 35], [35, 52], [35, 70], [52, 85], [68, 75]], "direction": "curve-left"}
+      ]
+    },
+    "d": {
+      "type": "lowercase",
+      "phonetic": "dee",
+      "sound": "duh as in dog",
+      "strokes": [
+        {"points": [[68, 52], [52, 38], [35, 52], [35, 72], [52, 85], [68, 75]], "direction": "curve-left"},
+        {"points": [[68, 10], [68, 85]], "direction": "down"}
+      ]
+    },
+    "e": {
+      "type": "lowercase",
+      "phonetic": "ee",
+      "sound": "eh as in elephant",
+      "strokes": [
+        {"points": [[32, 58], [68, 58]], "direction": "right"},
+        {"points": [[68, 58], [68, 48], [52, 35], [35, 52], [35, 70], [52, 85], [68, 75]], "direction": "curve"}
+      ]
+    },
+    "f": {
+      "type": "lowercase",
+      "phonetic": "ef",
+      "sound": "fuh as in fish",
+      "strokes": [
+        {"points": [[62, 18], [50, 8], [40, 20], [40, 85]], "direction": "curve-down"},
+        {"points": [[25, 42], [58, 42]], "direction": "right"}
+      ]
+    },
+    "g": {
+      "type": "lowercase",
+      "phonetic": "jee",
+      "sound": "guh as in goat",
+      "strokes": [
+        {"points": [[68, 52], [52, 38], [35, 52], [35, 70], [52, 80], [68, 70]], "direction": "curve-left"},
+        {"points": [[68, 38], [68, 95], [52, 105], [35, 98]], "direction": "down-curve"}
+      ]
+    },
+    "h": {
+      "type": "lowercase",
+      "phonetic": "aych",
+      "sound": "huh as in hat",
+      "strokes": [
+        {"points": [[28, 10], [28, 85]], "direction": "down"},
+        {"points": [[28, 52], [48, 38], [65, 52], [65, 85]], "direction": "curve-down"}
+      ]
+    },
+    "i": {
+      "type": "lowercase",
+      "phonetic": "eye",
+      "sound": "ih as in igloo",
+      "strokes": [
+        {"points": [[50, 40], [50, 85]], "direction": "down"},
+        {"points": [[50, 25], [50, 28]], "direction": "dot"}
+      ]
+    },
+    "j": {
+      "type": "lowercase",
+      "phonetic": "jay",
+      "sound": "juh as in jump",
+      "strokes": [
+        {"points": [[55, 40], [55, 95], [42, 105], [30, 98]], "direction": "down-curve"},
+        {"points": [[55, 25], [55, 28]], "direction": "dot"}
+      ]
+    },
+    "k": {
+      "type": "lowercase",
+      "phonetic": "kay",
+      "sound": "kuh as in kite",
+      "strokes": [
+        {"points": [[28, 10], [28, 85]], "direction": "down"},
+        {"points": [[65, 40], [28, 62]], "direction": "down-left"},
+        {"points": [[40, 55], [65, 85]], "direction": "down-right"}
+      ]
+    },
+    "l": {
+      "type": "lowercase",
+      "phonetic": "el",
+      "sound": "luh as in lion",
+      "strokes": [
+        {"points": [[50, 10], [50, 85]], "direction": "down"}
+      ]
+    },
+    "m": {
+      "type": "lowercase",
+      "phonetic": "em",
+      "sound": "muh as in moon",
+      "strokes": [
+        {"points": [[15, 40], [15, 85]], "direction": "down"},
+        {"points": [[15, 52], [35, 38], [50, 52], [50, 85]], "direction": "curve-down"},
+        {"points": [[50, 52], [70, 38], [85, 52], [85, 85]], "direction": "curve-down"}
+      ]
+    },
+    "n": {
+      "type": "lowercase",
+      "phonetic": "en",
+      "sound": "nuh as in nest",
+      "strokes": [
+        {"points": [[28, 40], [28, 85]], "direction": "down"},
+        {"points": [[28, 52], [52, 38], [70, 52], [70, 85]], "direction": "curve-down"}
+      ]
+    },
+    "o": {
+      "type": "lowercase",
+      "phonetic": "oh",
+      "sound": "ah as in octopus",
+      "strokes": [
+        {"points": [[50, 35], [32, 52], [32, 70], [50, 85], [68, 70], [68, 52], [50, 35]], "direction": "oval"}
+      ]
+    },
+    "p": {
+      "type": "lowercase",
+      "phonetic": "pee",
+      "sound": "puh as in pig",
+      "strokes": [
+        {"points": [[28, 40], [28, 105]], "direction": "down"},
+        {"points": [[28, 52], [48, 38], [65, 52], [65, 70], [48, 82], [28, 70]], "direction": "curve-right"}
+      ]
+    },
+    "q": {
+      "type": "lowercase",
+      "phonetic": "kyoo",
+      "sound": "kwuh as in queen",
+      "strokes": [
+        {"points": [[68, 52], [52, 38], [35, 52], [35, 70], [52, 82], [68, 70]], "direction": "curve-left"},
+        {"points": [[68, 40], [68, 105]], "direction": "down"}
+      ]
+    },
+    "r": {
+      "type": "lowercase",
+      "phonetic": "ar",
+      "sound": "ruh as in rabbit",
+      "strokes": [
+        {"points": [[35, 40], [35, 85]], "direction": "down"},
+        {"points": [[35, 55], [52, 42], [68, 48]], "direction": "curve-up"}
+      ]
+    },
+    "s": {
+      "type": "lowercase",
+      "phonetic": "ess",
+      "sound": "sss as in snake",
+      "strokes": [
+        {"points": [[62, 45], [50, 35], [38, 45], [42, 58], [62, 65], [65, 75], [52, 85], [38, 78]], "direction": "s-curve"}
+      ]
+    },
+    "t": {
+      "type": "lowercase",
+      "phonetic": "tee",
+      "sound": "tuh as in tiger",
+      "strokes": [
+        {"points": [[45, 15], [45, 80], [55, 88], [68, 82]], "direction": "down-curve"},
+        {"points": [[28, 42], [62, 42]], "direction": "right"}
+      ]
+    },
+    "u": {
+      "type": "lowercase",
+      "phonetic": "yoo",
+      "sound": "uh as in umbrella",
+      "strokes": [
+        {"points": [[28, 40], [28, 70], [48, 85], [65, 75]], "direction": "down-curve"},
+        {"points": [[65, 40], [65, 85]], "direction": "down"}
+      ]
+    },
+    "v": {
+      "type": "lowercase",
+      "phonetic": "vee",
+      "sound": "vuh as in van",
+      "strokes": [
+        {"points": [[25, 40], [50, 85]], "direction": "down-right"},
+        {"points": [[50, 85], [75, 40]], "direction": "up-right"}
+      ]
+    },
+    "w": {
+      "type": "lowercase",
+      "phonetic": "double-yoo",
+      "sound": "wuh as in water",
+      "strokes": [
+        {"points": [[15, 40], [28, 85]], "direction": "down-right"},
+        {"points": [[28, 85], [45, 55]], "direction": "up-right"},
+        {"points": [[45, 55], [62, 85]], "direction": "down-right"},
+        {"points": [[62, 85], [80, 40]], "direction": "up-right"}
+      ]
+    },
+    "x": {
+      "type": "lowercase",
+      "phonetic": "eks",
+      "sound": "ks as in box",
+      "strokes": [
+        {"points": [[25, 40], [75, 85]], "direction": "down-right"},
+        {"points": [[75, 40], [25, 85]], "direction": "down-left"}
+      ]
+    },
+    "y": {
+      "type": "lowercase",
+      "phonetic": "why",
+      "sound": "yuh as in yellow",
+      "strokes": [
+        {"points": [[25, 40], [50, 75]], "direction": "down-right"},
+        {"points": [[75, 40], [50, 75], [38, 95], [25, 102]], "direction": "down-curve"}
+      ]
+    },
+    "z": {
+      "type": "lowercase",
+      "phonetic": "zee",
+      "sound": "zzz as in zebra",
+      "strokes": [
+        {"points": [[25, 40], [75, 42]], "direction": "right"},
+        {"points": [[75, 42], [25, 83]], "direction": "down-left"},
+        {"points": [[25, 83], [75, 85]], "direction": "right"}
+      ]
+    },
+    "0": {
+      "type": "number",
+      "phonetic": "zero",
+      "sound": "zero",
+      "strokes": [
+        {"points": [[50, 10], [28, 28], [28, 72], [50, 90], [72, 72], [72, 28], [50, 10]], "direction": "oval"}
+      ]
+    },
+    "1": {
+      "type": "number",
+      "phonetic": "one",
+      "sound": "one",
+      "strokes": [
+        {"points": [[50, 12], [50, 88]], "direction": "down"}
+      ]
+    },
+    "2": {
+      "type": "number",
+      "phonetic": "two",
+      "sound": "two",
+      "strokes": [
+        {"points": [[28, 28], [42, 10], [62, 10], [75, 28], [75, 42], [25, 90], [75, 88]], "direction": "curve-down-right"}
+      ]
+    },
+    "3": {
+      "type": "number",
+      "phonetic": "three",
+      "sound": "three",
+      "strokes": [
+        {"points": [[25, 18], [58, 10], [75, 30], [55, 50]], "direction": "curve-right"},
+        {"points": [[55, 50], [75, 70], [58, 90], [25, 85]], "direction": "curve-right"}
+      ]
+    },
+    "4": {
+      "type": "number",
+      "phonetic": "four",
+      "sound": "four",
+      "strokes": [
+        {"points": [[62, 10], [22, 62], [78, 62]], "direction": "down-right"},
+        {"points": [[62, 38], [62, 90]], "direction": "down"}
+      ]
+    },
+    "5": {
+      "type": "number",
+      "phonetic": "five",
+      "sound": "five",
+      "strokes": [
+        {"points": [[70, 10], [25, 12]], "direction": "left"},
+        {"points": [[25, 12], [25, 48]], "direction": "down"},
+        {"points": [[25, 48], [52, 42], [72, 58], [70, 80], [48, 90], [25, 82]], "direction": "curve-right"}
+      ]
+    },
+    "6": {
+      "type": "number",
+      "phonetic": "six",
+      "sound": "six",
+      "strokes": [
+        {"points": [[65, 18], [48, 10], [25, 30], [25, 72], [50, 90], [72, 75], [68, 58], [48, 50], [25, 62]], "direction": "curve-loop"}
+      ]
+    },
+    "7": {
+      "type": "number",
+      "phonetic": "seven",
+      "sound": "seven",
+      "strokes": [
+        {"points": [[22, 10], [78, 12]], "direction": "right"},
+        {"points": [[78, 12], [38, 90]], "direction": "down-left"}
+      ]
+    },
+    "8": {
+      "type": "number",
+      "phonetic": "eight",
+      "sound": "eight",
+      "strokes": [
+        {"points": [[50, 50], [35, 35], [35, 22], [50, 10], [65, 22], [65, 35], [50, 50], [25, 68], [25, 80], [50, 90], [75, 80], [75, 68], [50, 50]], "direction": "figure-8"}
+      ]
+    },
+    "9": {
+      "type": "number",
+      "phonetic": "nine",
+      "sound": "nine",
+      "strokes": [
+        {"points": [[70, 42], [52, 52], [35, 42], [35, 25], [52, 10], [70, 25], [70, 75], [52, 90], [35, 85]], "direction": "loop-down"}
+      ]
+    }
+  }
+}
