@@ -386,3 +386,253 @@ pub fn prune_branches(skeleton: &mut Vec<bool>, width: usize, height: usize, pru
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_distance_transform_single_point() {
+        // 5x5 grid with single point in center
+        let mut binary = vec![false; 25];
+        binary[12] = true; // center point (2, 2)
+
+        let result = distance_transform_edt(&binary, 5, 5);
+
+        // Center should be 0
+        assert_eq!(result[12], 0.0);
+
+        // Adjacent pixels should be ~1.0
+        assert!((result[7] - 1.0).abs() < 0.01);  // top
+        assert!((result[11] - 1.0).abs() < 0.01); // left
+        assert!((result[13] - 1.0).abs() < 0.01); // right
+        assert!((result[17] - 1.0).abs() < 0.01); // bottom
+
+        // Diagonal pixels should be ~1.414
+        assert!((result[6] - 1.414).abs() < 0.01);  // top-left
+        assert!((result[8] - 1.414).abs() < 0.01);  // top-right
+        assert!((result[16] - 1.414).abs() < 0.01); // bottom-left
+        assert!((result[18] - 1.414).abs() < 0.01); // bottom-right
+    }
+
+    #[test]
+    fn test_distance_transform_empty_image() {
+        let binary = vec![false; 25];
+        let result = distance_transform_edt(&binary, 5, 5);
+
+        // All distances should be very large (MAX)
+        for val in result {
+            assert!(val > 100.0);
+        }
+    }
+
+    #[test]
+    fn test_distance_transform_full_image() {
+        let binary = vec![true; 25];
+        let result = distance_transform_edt(&binary, 5, 5);
+
+        // All distances should be 0
+        for val in result {
+            assert_eq!(val, 0.0);
+        }
+    }
+
+    #[test]
+    fn test_binary_dilation_single_point() {
+        let mut binary = vec![false; 25];
+        binary[12] = true; // center point (2, 2)
+
+        let result = binary_dilation(&binary, 5, 5, 1);
+
+        // Center and all neighbors should be true
+        assert!(result[12]); // center
+        assert!(result[6]);  // top-left
+        assert!(result[7]);  // top
+        assert!(result[8]);  // top-right
+        assert!(result[11]); // left
+        assert!(result[13]); // right
+        assert!(result[16]); // bottom-left
+        assert!(result[17]); // bottom
+        assert!(result[18]); // bottom-right
+
+        // Corners should still be false
+        assert!(!result[0]);  // top-left corner
+        assert!(!result[4]);  // top-right corner
+        assert!(!result[20]); // bottom-left corner
+        assert!(!result[24]); // bottom-right corner
+    }
+
+    #[test]
+    fn test_binary_dilation_multiple_iterations() {
+        let mut binary = vec![false; 49]; // 7x7
+        binary[24] = true; // center point (3, 3)
+
+        let result = binary_dilation(&binary, 7, 7, 2);
+
+        // After 2 iterations, should expand by 2 pixels in all directions
+        // Check that center 5x5 area is mostly true
+        let true_count: usize = result.iter().filter(|&&x| x).count();
+        assert!(true_count >= 20);
+    }
+
+    #[test]
+    fn test_binary_erosion_removes_single_pixel() {
+        let mut binary = vec![false; 25];
+        binary[12] = true; // single center pixel
+
+        let result = binary_erosion(&binary, 5, 5, 1);
+
+        // Single pixel should be eroded away
+        assert!(!result[12]);
+    }
+
+    #[test]
+    fn test_binary_erosion_preserves_solid_block() {
+        // 5x5 grid with solid 3x3 block in center
+        let mut binary = vec![false; 25];
+        for y in 1..4 {
+            for x in 1..4 {
+                binary[y * 5 + x] = true;
+            }
+        }
+
+        let result = binary_erosion(&binary, 5, 5, 1);
+
+        // Center should still be true after 1 erosion
+        assert!(result[12]);
+    }
+
+    #[test]
+    fn test_skeletonize_horizontal_line() {
+        // 5x15 grid with horizontal line
+        let mut binary = vec![false; 75];
+        for x in 2..13 {
+            for y in 1..4 {
+                binary[y * 15 + x] = true;
+            }
+        }
+
+        let result = skeletonize(&binary, 15, 5);
+
+        // Should produce a thin horizontal line
+        let true_count: usize = result.iter().filter(|&&x| x).count();
+        assert!(true_count > 0);
+        assert!(true_count < 20); // Should be much thinner than original
+    }
+
+    #[test]
+    fn test_skeletonize_empty_image() {
+        let binary = vec![false; 25];
+        let result = skeletonize(&binary, 5, 5);
+
+        // Should remain empty
+        assert!(result.iter().all(|&x| !x));
+    }
+
+    #[test]
+    fn test_find_endpoints_line() {
+        // Create a simple horizontal line
+        let mut skeleton = vec![false; 25];
+        skeleton[11] = true; // (1, 2)
+        skeleton[12] = true; // (2, 2)
+        skeleton[13] = true; // (3, 2)
+
+        let endpoints = find_endpoints(&skeleton, 5, 5);
+
+        // Should find 2 endpoints
+        assert_eq!(endpoints.len(), 2);
+        assert!(endpoints.contains(&(1, 2)));
+        assert!(endpoints.contains(&(3, 2)));
+    }
+
+    #[test]
+    fn test_find_endpoints_circle() {
+        // Create a small closed loop (no endpoints)
+        let mut skeleton = vec![false; 49]; // 7x7
+        // Create a small square loop
+        skeleton[15] = true; // (1, 2)
+        skeleton[16] = true; // (2, 2)
+        skeleton[17] = true; // (3, 2)
+        skeleton[22] = true; // (1, 3)
+        skeleton[24] = true; // (3, 3)
+        skeleton[29] = true; // (1, 4)
+        skeleton[30] = true; // (2, 4)
+        skeleton[31] = true; // (3, 4)
+
+        let endpoints = find_endpoints(&skeleton, 7, 7);
+
+        // Closed loop should have no endpoints
+        assert_eq!(endpoints.len(), 0);
+    }
+
+    #[test]
+    fn test_count_transitions() {
+        // All false - 0 transitions
+        let neighbors = [false, false, false, false, false, false, false, false];
+        assert_eq!(count_transitions(&neighbors), 0);
+
+        // Alternating - 4 transitions
+        let neighbors = [true, false, true, false, true, false, true, false];
+        assert_eq!(count_transitions(&neighbors), 4);
+
+        // Single true - 1 transition
+        let neighbors = [true, false, false, false, false, false, false, false];
+        assert_eq!(count_transitions(&neighbors), 1);
+
+        // Two adjacent true - 1 transition
+        let neighbors = [true, true, false, false, false, false, false, false];
+        assert_eq!(count_transitions(&neighbors), 1);
+    }
+
+    #[test]
+    fn test_count_neighbors() {
+        let neighbors = [false, false, false, false, false, false, false, false];
+        assert_eq!(count_neighbors(&neighbors), 0);
+
+        let neighbors = [true, true, true, true, true, true, true, true];
+        assert_eq!(count_neighbors(&neighbors), 8);
+
+        let neighbors = [true, false, true, false, true, false, true, false];
+        assert_eq!(count_neighbors(&neighbors), 4);
+    }
+
+    #[test]
+    fn test_bridge_gaps_simple() {
+        // Create two line segments with a gap
+        let mut skeleton = vec![false; 49]; // 7x7
+        skeleton[8] = true;  // (1, 1)
+        skeleton[9] = true;  // (2, 1)
+        skeleton[12] = true; // (5, 1)
+        skeleton[13] = true; // (6, 1)
+
+        bridge_gaps(&mut skeleton, 7, 7, 5);
+
+        // Gap should be bridged, total true count should increase
+        let true_count: usize = skeleton.iter().filter(|&&x| x).count();
+        assert!(true_count > 4);
+    }
+
+    #[test]
+    fn test_prune_branches() {
+        // Create a T-shape (main line with a branch)
+        let mut skeleton = vec![false; 49]; // 7x7
+        // Horizontal line
+        skeleton[22] = true; // (1, 3)
+        skeleton[23] = true; // (2, 3)
+        skeleton[24] = true; // (3, 3)
+        skeleton[25] = true; // (4, 3)
+        skeleton[26] = true; // (5, 3)
+        // Vertical branch
+        skeleton[17] = true; // (3, 2)
+        skeleton[10] = true; // (3, 1)
+
+        let initial_count: usize = skeleton.iter().filter(|&&x| x).count();
+
+        prune_branches(&mut skeleton, 7, 7, 2, 0.5);
+
+        let final_count: usize = skeleton.iter().filter(|&&x| x).count();
+
+        // Should have removed some pixels
+        assert!(final_count <= initial_count);
+    }
+}

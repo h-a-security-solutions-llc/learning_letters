@@ -378,3 +378,210 @@ fn get_star_rating(score: u8) -> (u8, String) {
         _ => (1, "Keep practicing!".to_string()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_star_rating_5_stars() {
+        let (stars, feedback) = get_star_rating(100);
+        assert_eq!(stars, 5);
+        assert_eq!(feedback, "Amazing! Perfect!");
+
+        let (stars, feedback) = get_star_rating(80);
+        assert_eq!(stars, 5);
+        assert_eq!(feedback, "Amazing! Perfect!");
+    }
+
+    #[test]
+    fn test_get_star_rating_4_stars() {
+        let (stars, feedback) = get_star_rating(79);
+        assert_eq!(stars, 4);
+        assert_eq!(feedback, "Great job!");
+
+        let (stars, feedback) = get_star_rating(65);
+        assert_eq!(stars, 4);
+        assert_eq!(feedback, "Great job!");
+    }
+
+    #[test]
+    fn test_get_star_rating_3_stars() {
+        let (stars, feedback) = get_star_rating(64);
+        assert_eq!(stars, 3);
+        assert_eq!(feedback, "Good work!");
+
+        let (stars, feedback) = get_star_rating(50);
+        assert_eq!(stars, 3);
+        assert_eq!(feedback, "Good work!");
+    }
+
+    #[test]
+    fn test_get_star_rating_2_stars() {
+        let (stars, feedback) = get_star_rating(49);
+        assert_eq!(stars, 2);
+        assert_eq!(feedback, "Nice try!");
+
+        let (stars, feedback) = get_star_rating(30);
+        assert_eq!(stars, 2);
+        assert_eq!(feedback, "Nice try!");
+    }
+
+    #[test]
+    fn test_get_star_rating_1_star() {
+        let (stars, feedback) = get_star_rating(29);
+        assert_eq!(stars, 1);
+        assert_eq!(feedback, "Keep practicing!");
+
+        let (stars, feedback) = get_star_rating(0);
+        assert_eq!(stars, 1);
+        assert_eq!(feedback, "Keep practicing!");
+    }
+
+    #[test]
+    fn test_extract_and_center_character_empty() {
+        // All white image (no drawing)
+        let img = GrayImage::from_pixel(100, 100, Luma([255u8]));
+        let result = extract_and_center_character(&img);
+
+        // Should return all 1.0 (white)
+        assert_eq!(result.len(), (TARGET_SIZE * TARGET_SIZE) as usize);
+        assert!(result.iter().all(|&v| v == 1.0));
+    }
+
+    #[test]
+    fn test_extract_and_center_character_with_content() {
+        // Create image with a black square in the center
+        let mut img = GrayImage::from_pixel(100, 100, Luma([255u8]));
+        for y in 40..60 {
+            for x in 40..60 {
+                img.put_pixel(x, y, Luma([0u8]));
+            }
+        }
+
+        let result = extract_and_center_character(&img);
+
+        // Should have some dark pixels (< 0.5)
+        let dark_count = result.iter().filter(|&&v| v < 0.5).count();
+        assert!(dark_count > 0);
+    }
+
+    #[test]
+    fn test_normalize_line_thickness_empty() {
+        let binary = vec![false; 100];
+        let result = normalize_line_thickness(&binary, 10, 10, 5, false);
+
+        // Should remain empty
+        assert!(result.iter().all(|&x| !x));
+    }
+
+    #[test]
+    fn test_normalize_line_thickness_with_content() {
+        // Create a thick horizontal line
+        let mut binary = vec![false; 100];
+        for y in 3..7 {
+            for x in 2..8 {
+                binary[y * 10 + x] = true;
+            }
+        }
+
+        let result = normalize_line_thickness(&binary, 10, 10, 3, false);
+
+        // Should have fewer true pixels than original (thinned)
+        let original_count: usize = binary.iter().filter(|&&x| x).count();
+        let result_count: usize = result.iter().filter(|&&x| x).count();
+
+        // The line should be thinner but still present
+        assert!(result_count > 0);
+        assert!(result_count <= original_count);
+    }
+
+    #[test]
+    fn test_calculate_coverage_score_perfect() {
+        // Identical images should give high coverage
+        let image: Vec<f32> = (0..TARGET_SIZE * TARGET_SIZE)
+            .map(|i| if i % 10 == 0 { 0.0 } else { 1.0 })
+            .collect();
+
+        let score = calculate_coverage_score(&image, &image);
+
+        // Should be very high (close to 1.0)
+        assert!(score > 0.9);
+    }
+
+    #[test]
+    fn test_calculate_coverage_score_empty_drawn() {
+        let drawn: Vec<f32> = vec![1.0; (TARGET_SIZE * TARGET_SIZE) as usize]; // all white
+        let reference: Vec<f32> = (0..TARGET_SIZE * TARGET_SIZE)
+            .map(|i| if i % 10 == 0 { 0.0 } else { 1.0 })
+            .collect();
+
+        let score = calculate_coverage_score(&drawn, &reference);
+
+        // Should be 0 (nothing drawn)
+        assert_eq!(score, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_accuracy_score_perfect() {
+        // Identical images should give high accuracy
+        let image: Vec<f32> = (0..TARGET_SIZE * TARGET_SIZE)
+            .map(|i| if i % 10 == 0 { 0.0 } else { 1.0 })
+            .collect();
+
+        let score = calculate_accuracy_score(&image, &image);
+
+        // Should be very high (close to 1.0)
+        assert!(score > 0.9);
+    }
+
+    #[test]
+    fn test_calculate_accuracy_score_empty_drawn() {
+        let drawn: Vec<f32> = vec![1.0; (TARGET_SIZE * TARGET_SIZE) as usize]; // all white
+        let reference: Vec<f32> = (0..TARGET_SIZE * TARGET_SIZE)
+            .map(|i| if i % 10 == 0 { 0.0 } else { 1.0 })
+            .collect();
+
+        let score = calculate_accuracy_score(&drawn, &reference);
+
+        // Should be 0 (nothing drawn)
+        assert_eq!(score, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_stroke_similarity_identical() {
+        // Identical images should give high similarity
+        let image: Vec<f32> = (0..TARGET_SIZE * TARGET_SIZE)
+            .map(|i| if i % 10 == 0 { 0.0 } else { 1.0 })
+            .collect();
+
+        let score = calculate_stroke_similarity(&image, &image);
+
+        // Should be high (close to 1.0)
+        assert!(score > 0.8);
+    }
+
+    #[test]
+    fn test_calculate_stroke_similarity_empty() {
+        let drawn: Vec<f32> = vec![1.0; (TARGET_SIZE * TARGET_SIZE) as usize]; // all white
+        let reference: Vec<f32> = vec![1.0; (TARGET_SIZE * TARGET_SIZE) as usize];
+
+        let score = calculate_stroke_similarity(&drawn, &reference);
+
+        // Should be 0 (no content to compare)
+        assert_eq!(score, 0.0);
+    }
+
+    #[test]
+    fn test_encode_grayscale_to_png() {
+        let img = GrayImage::from_pixel(10, 10, Luma([128u8]));
+        let result = encode_grayscale_to_png(&img);
+
+        assert!(result.is_ok());
+        let png_bytes = result.unwrap();
+
+        // PNG header signature
+        assert!(png_bytes.len() > 8);
+        assert_eq!(&png_bytes[0..8], &[137, 80, 78, 71, 13, 10, 26, 10]);
+    }
+}
