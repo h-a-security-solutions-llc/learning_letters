@@ -284,6 +284,22 @@
               Display text when pronunciation plays
             </p>
           </div>
+
+          <!-- Show Articulation Cues -->
+          <div class="setting-item">
+            <label class="setting-toggle">
+              <input
+                type="checkbox"
+                :checked="localSettings.enableArticulationCues"
+                @change="updateSetting('enableArticulationCues', $event.target.checked)"
+              >
+              <span class="toggle-slider" />
+              <span class="setting-label">Show Pronunciation Help</span>
+            </label>
+            <p class="setting-description">
+              Display mouth position and teaching tips to help learn letter sounds
+            </p>
+          </div>
         </div>
 
         <div class="setting-section">
@@ -558,6 +574,7 @@ export default {
     const fontPreviewVisible = ref(false)
     const fontPreviewImage = ref(null)
     const fontPreviewLoading = ref(false)
+    const previewAudio = ref(null)
 
     // Watch for external settings changes
     watch(() => props.settings, (newVal) => {
@@ -608,9 +625,36 @@ export default {
 
     const previewVoice = async () => {
       try {
+        // Stop any currently playing preview
+        if (previewAudio.value) {
+          previewAudio.value.pause()
+          previewAudio.value.currentTime = 0
+          previewAudio.value = null
+        }
+
         // Play a sample letter pronunciation with selected voice and speed
         const audio = new Audio(apiUrl(`/api/audio/A?voice=${localSettings.value.voiceGender}`))
         audio.playbackRate = localSettings.value.audioSpeed || 1.0
+
+        // Store reference to prevent garbage collection
+        previewAudio.value = audio
+
+        // Clean up when done
+        audio.onended = () => {
+          if (previewAudio.value === audio) {
+            previewAudio.value = null
+          }
+        }
+
+        // Wait for audio to be ready
+        await new Promise((resolve, reject) => {
+          audio.oncanplaythrough = resolve
+          audio.onerror = reject
+          if (audio.readyState >= 4) {
+            resolve()
+          }
+        })
+
         await audio.play()
       } catch (error) {
         console.error('Failed to play voice preview:', error)

@@ -25,6 +25,7 @@ class ScoreRequest(BaseModel):
     font: Optional[str] = None  # Font name (e.g., 'Fredoka-Regular')
     mode: str = "freestyle"  # Drawing mode: freestyle, tracing, step-by-step
     record_progress: bool = True  # Whether to record progress (when logged in)
+    tolerance: float = 1.0  # Scoring tolerance multiplier (0.5-2.0)
 
 
 class ScoreResponse(BaseModel):
@@ -61,7 +62,10 @@ async def score_character(
     if not request.character or len(request.character) != 1:
         raise HTTPException(status_code=400, detail="Single character is required")
 
-    result = score_drawing(request.image_data, request.character, request.font)
+    # Clamp tolerance to valid range (0.5-2.0)
+    tolerance = max(0.5, min(2.0, request.tolerance))
+
+    result = score_drawing(request.image_data, request.character, request.font, tolerance=tolerance)
 
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])

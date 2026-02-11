@@ -72,33 +72,123 @@ async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> 
  * @param canvas - The canvas element with the user's drawing
  * @param character - The character that was drawn
  * @param fontName - The font to use for reference (default: Fredoka-Regular)
+ * @param debugMode - Whether to auto-save debug images (default: false)
  * @returns ScoringResult with score, stars, and detailed metrics
  */
 export async function scoreDrawing(
   canvas: HTMLCanvasElement,
   character: string,
-  fontName: string = 'Fredoka-Regular'
+  fontName: string = 'Fredoka-Regular',
+  debugMode: boolean = false
 ): Promise<ScoringResult> {
-  await initScoring()
+  // Store debug info on window object for inspection
+  const debugLog: string[] = []
+  const log = (msg: string) => {
+    debugLog.push(msg)
+    // Try multiple console methods
+    console.warn(msg)
+    console.log(msg)
+    console.info(msg)
+  }
 
-  const pngBytes = await canvasToPngBytes(canvas)
-  const fontData = await loadFont(fontName)
+  log('========== SCORING DEBUG START ==========')
+  log(`[Scoring] Character: ${character}, Font: ${fontName}`)
+  log(`[Scoring] Canvas: ${canvas.width}x${canvas.height}`)
 
-  const result = score_drawing(pngBytes, character, fontData)
+  try {
+    await initScoring()
+    log('[Scoring] WASM initialized')
 
-  // Convert reference image bytes to data URL
-  const refBytes = result.reference_image
-  const refBlob = new Blob([refBytes], { type: 'image/png' })
-  const referenceImage = URL.createObjectURL(refBlob)
+    const pngBytes = await canvasToPngBytes(canvas)
+    log(`[Scoring] PNG bytes: ${pngBytes.length}`)
 
-  return {
-    score: result.score,
-    stars: result.stars,
-    feedback: result.feedback,
-    coverage: result.coverage,
-    accuracy: result.accuracy,
-    similarity: result.similarity,
-    referenceImage
+    const fontData = await loadFont(fontName)
+    log(`[Scoring] Font loaded: ${fontData.length} bytes`)
+
+    const result = score_drawing(pngBytes, character, fontData)
+
+    log('=== RESULTS ===')
+    log(`Coverage: ${result.coverage}%`)
+    log(`Accuracy: ${result.accuracy}%`)
+    log(`Similarity: ${result.similarity}%`)
+    log(`Final: ${result.score}% (${result.stars} stars)`)
+
+    // Get debug images from WASM
+    const debugUserBytes = result.debug_user_processed as Uint8Array
+    const debugRefBytes = result.debug_reference_processed as Uint8Array
+
+    // Create blob URLs for debug images
+    const debugUserBlob = new Blob([new Uint8Array(debugUserBytes)], { type: 'image/png' })
+    const debugRefBlob = new Blob([new Uint8Array(debugRefBytes)], { type: 'image/png' })
+    const debugUserUrl = URL.createObjectURL(debugUserBlob)
+    const debugRefUrl = URL.createObjectURL(debugRefBlob)
+
+    log(`Debug images created: user=${debugUserBytes.length} bytes, ref=${debugRefBytes.length} bytes`)
+
+    // Store on window for debugging
+    ;(window as any).__SCORING_DEBUG__ = {
+      timestamp: new Date().toISOString(),
+      character,
+      fontName,
+      canvasSize: `${canvas.width}x${canvas.height}`,
+      pngBytes: pngBytes.length,
+      result: {
+        score: result.score,
+        stars: result.stars,
+        coverage: result.coverage,
+        accuracy: result.accuracy,
+        similarity: result.similarity,
+        feedback: result.feedback
+      },
+      logs: debugLog,
+      debugImages: {
+        userProcessed: debugUserUrl,
+        referenceProcessed: debugRefUrl
+      },
+      // Function to download debug images
+      saveDebugImages: () => {
+        const a1 = document.createElement('a')
+        a1.href = debugUserUrl
+        a1.download = `debug_user_${character}_${Date.now()}.png`
+        a1.click()
+
+        const a2 = document.createElement('a')
+        a2.href = debugRefUrl
+        a2.download = `debug_ref_${character}_${Date.now()}.png`
+        a2.click()
+
+        // Also save original canvas
+        const a3 = document.createElement('a')
+        a3.href = canvas.toDataURL('image/png')
+        a3.download = `debug_original_${character}_${Date.now()}.png`
+        a3.click()
+      }
+    }
+    log('Debug info stored in window.__SCORING_DEBUG__')
+
+    // Auto-save debug images if debug mode is enabled
+    if (debugMode) {
+      log('Debug mode enabled - auto-saving debug images...')
+      ;(window as any).__SCORING_DEBUG__.saveDebugImages()
+    }
+
+    // Convert reference image bytes to data URL
+    const refBytes = result.reference_image as Uint8Array
+    const refBlob = new Blob([new Uint8Array(refBytes)], { type: 'image/png' })
+    const referenceImage = URL.createObjectURL(refBlob)
+
+    return {
+      score: result.score,
+      stars: result.stars,
+      feedback: result.feedback,
+      coverage: result.coverage,
+      accuracy: result.accuracy,
+      similarity: result.similarity,
+      referenceImage
+    }
+  } catch (error) {
+    console.error('[Scoring] Error during scoring:', error)
+    throw error
   }
 }
 
@@ -118,9 +208,9 @@ export async function getReferenceImage(
   await initScoring()
 
   const fontData = await loadFont(fontName)
-  const pngBytes = generate_reference_image(character, fontData, size)
+  const pngBytes = generate_reference_image(character, fontData, size) as Uint8Array
 
-  const blob = new Blob([pngBytes], { type: 'image/png' })
+  const blob = new Blob([new Uint8Array(pngBytes)], { type: 'image/png' })
   return URL.createObjectURL(blob)
 }
 

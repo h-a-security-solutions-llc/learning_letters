@@ -45,14 +45,14 @@ CHARACTER_DATA = {
     "B": {
         "type": "uppercase",
         "name": "Capital B",
-        "sound": "buh",
+        "sound": "b",
         "words": ["ball", "bear", "banana", "butterfly", "boat"],
     },
-    "C": {"type": "uppercase", "name": "Capital C", "sound": "kuh", "words": ["cat", "car", "cake", "cow", "cookie"]},
+    "C": {"type": "uppercase", "name": "Capital C", "sound": "k", "words": ["cat", "car", "cake", "cow", "cookie"]},
     "D": {
         "type": "uppercase",
         "name": "Capital D",
-        "sound": "duh",
+        "sound": "d",
         "words": ["dog", "duck", "dinosaur", "door", "dolphin"],
     },
     "E": {
@@ -64,19 +64,19 @@ CHARACTER_DATA = {
     "F": {
         "type": "uppercase",
         "name": "Capital F",
-        "sound": "fuh",
+        "sound": "f",
         "words": ["fish", "frog", "flower", "fire", "feather"],
     },
     "G": {
         "type": "uppercase",
         "name": "Capital G",
-        "sound": "guh",
+        "sound": "g",
         "words": ["goat", "grape", "giraffe", "guitar", "garden"],
     },
     "H": {
         "type": "uppercase",
         "name": "Capital H",
-        "sound": "huh",
+        "sound": "h",
         "words": ["hat", "horse", "house", "heart", "hippo"],
     },
     "I": {
@@ -88,31 +88,31 @@ CHARACTER_DATA = {
     "J": {
         "type": "uppercase",
         "name": "Capital J",
-        "sound": "juh",
+        "sound": "j",
         "words": ["jump", "jellyfish", "jacket", "juice", "jaguar"],
     },
     "K": {
         "type": "uppercase",
         "name": "Capital K",
-        "sound": "kuh",
+        "sound": "k",
         "words": ["kite", "king", "kangaroo", "key", "kitten"],
     },
     "L": {
         "type": "uppercase",
         "name": "Capital L",
-        "sound": "luh",
+        "sound": "l",
         "words": ["lion", "lemon", "leaf", "ladder", "lamp"],
     },
     "M": {
         "type": "uppercase",
         "name": "Capital M",
-        "sound": "muh",
+        "sound": "m",
         "words": ["moon", "monkey", "mouse", "milk", "mountain"],
     },
     "N": {
         "type": "uppercase",
         "name": "Capital N",
-        "sound": "nuh",
+        "sound": "n",
         "words": ["nest", "nose", "nut", "night", "noodle"],
     },
     "O": {
@@ -124,19 +124,19 @@ CHARACTER_DATA = {
     "P": {
         "type": "uppercase",
         "name": "Capital P",
-        "sound": "puh",
+        "sound": "p",
         "words": ["pig", "pizza", "panda", "penguin", "plane"],
     },
     "Q": {
         "type": "uppercase",
         "name": "Capital Q",
-        "sound": "kwuh",
+        "sound": "kw",
         "words": ["queen", "quilt", "question", "quiet", "quail"],
     },
     "R": {
         "type": "uppercase",
         "name": "Capital R",
-        "sound": "ruh",
+        "sound": "r",
         "words": ["rabbit", "rainbow", "robot", "rocket", "rain"],
     },
     "S": {
@@ -148,7 +148,7 @@ CHARACTER_DATA = {
     "T": {
         "type": "uppercase",
         "name": "Capital T",
-        "sound": "tuh",
+        "sound": "t",
         "words": ["tiger", "turtle", "train", "tree", "tomato"],
     },
     "U": {
@@ -160,25 +160,25 @@ CHARACTER_DATA = {
     "V": {
         "type": "uppercase",
         "name": "Capital V",
-        "sound": "vuh",
+        "sound": "v",
         "words": ["van", "violin", "volcano", "vegetable", "vest"],
     },
     "W": {
         "type": "uppercase",
         "name": "Capital W",
-        "sound": "wuh",
+        "sound": "w",
         "words": ["water", "whale", "wagon", "window", "watermelon"],
     },
     "X": {
         "type": "uppercase",
         "name": "Capital X",
         "sound": "ks",
-        "words": ["x-ray", "xylophone", "box", "fox", "mix"],
+        "words": ["box", "fox", "six", "ox", "mix"],
     },
     "Y": {
         "type": "uppercase",
         "name": "Capital Y",
-        "sound": "yuh",
+        "sound": "y",
         "words": ["yellow", "yak", "yarn", "yogurt", "yo-yo"],
     },
     "Z": {
@@ -197,14 +197,14 @@ CHARACTER_DATA = {
     "b": {
         "type": "lowercase",
         "name": "Lowercase b",
-        "sound": "buh",
+        "sound": "b",
         "words": ["ball", "bear", "banana", "butterfly", "boat"],
     },
-    "c": {"type": "lowercase", "name": "Lowercase c", "sound": "kuh", "words": ["cat", "car", "cake", "cow", "cookie"]},
+    "c": {"type": "lowercase", "name": "Lowercase c", "sound": "k", "words": ["cat", "car", "cake", "cow", "cookie"]},
     "d": {
         "type": "lowercase",
         "name": "Lowercase d",
-        "sound": "duh",
+        "sound": "d",
         "words": ["dog", "duck", "dinosaur", "door", "dolphin"],
     },
     "e": {
@@ -216,19 +216,19 @@ CHARACTER_DATA = {
     "f": {
         "type": "lowercase",
         "name": "Lowercase f",
-        "sound": "fuh",
+        "sound": "f",
         "words": ["fish", "frog", "flower", "fire", "feather"],
     },
     "g": {
         "type": "lowercase",
         "name": "Lowercase g",
-        "sound": "guh",
+        "sound": "g",
         "words": ["goat", "grape", "giraffe", "guitar", "garden"],
     },
     "h": {
         "type": "lowercase",
         "name": "Lowercase h",
-        "sound": "huh",
+        "sound": "h",
         "words": ["hat", "horse", "house", "heart", "hippo"],
     },
     "i": {
@@ -240,31 +240,31 @@ CHARACTER_DATA = {
     "j": {
         "type": "lowercase",
         "name": "Lowercase j",
-        "sound": "juh",
+        "sound": "j",
         "words": ["jump", "jellyfish", "jacket", "juice", "jaguar"],
     },
     "k": {
         "type": "lowercase",
         "name": "Lowercase k",
-        "sound": "kuh",
+        "sound": "k",
         "words": ["kite", "king", "kangaroo", "key", "kitten"],
     },
     "l": {
         "type": "lowercase",
         "name": "Lowercase l",
-        "sound": "luh",
+        "sound": "l",
         "words": ["lion", "lemon", "leaf", "ladder", "lamp"],
     },
     "m": {
         "type": "lowercase",
         "name": "Lowercase m",
-        "sound": "muh",
+        "sound": "m",
         "words": ["moon", "monkey", "mouse", "milk", "mountain"],
     },
     "n": {
         "type": "lowercase",
         "name": "Lowercase n",
-        "sound": "nuh",
+        "sound": "n",
         "words": ["nest", "nose", "nut", "night", "noodle"],
     },
     "o": {
@@ -276,19 +276,19 @@ CHARACTER_DATA = {
     "p": {
         "type": "lowercase",
         "name": "Lowercase p",
-        "sound": "puh",
+        "sound": "p",
         "words": ["pig", "pizza", "panda", "penguin", "plane"],
     },
     "q": {
         "type": "lowercase",
         "name": "Lowercase q",
-        "sound": "kwuh",
+        "sound": "kw",
         "words": ["queen", "quilt", "question", "quiet", "quail"],
     },
     "r": {
         "type": "lowercase",
         "name": "Lowercase r",
-        "sound": "ruh",
+        "sound": "r",
         "words": ["rabbit", "rainbow", "robot", "rocket", "rain"],
     },
     "s": {
@@ -300,7 +300,7 @@ CHARACTER_DATA = {
     "t": {
         "type": "lowercase",
         "name": "Lowercase t",
-        "sound": "tuh",
+        "sound": "t",
         "words": ["tiger", "turtle", "train", "tree", "tomato"],
     },
     "u": {
@@ -312,25 +312,25 @@ CHARACTER_DATA = {
     "v": {
         "type": "lowercase",
         "name": "Lowercase v",
-        "sound": "vuh",
+        "sound": "v",
         "words": ["van", "violin", "volcano", "vegetable", "vest"],
     },
     "w": {
         "type": "lowercase",
         "name": "Lowercase w",
-        "sound": "wuh",
+        "sound": "w",
         "words": ["water", "whale", "wagon", "window", "watermelon"],
     },
     "x": {
         "type": "lowercase",
         "name": "Lowercase x",
         "sound": "ks",
-        "words": ["x-ray", "xylophone", "box", "fox", "mix"],
+        "words": ["box", "fox", "six", "ox", "mix"],
     },
     "y": {
         "type": "lowercase",
         "name": "Lowercase y",
-        "sound": "yuh",
+        "sound": "y",
         "words": ["yellow", "yak", "yarn", "yogurt", "yo-yo"],
     },
     "z": {

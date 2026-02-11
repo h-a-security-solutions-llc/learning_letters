@@ -143,6 +143,7 @@
         :color-blind-mode="settings.colorBlindMode"
         :audio-speed="settings.audioSpeed"
         :enable-captions="settings.enableCaptions"
+        :enable-articulation-cues="settings.enableArticulationCues"
         :high-score-for-mode="highScoreForMode"
         :is-multiplayer="isMultiplayerMode"
         @submit="onSubmitDrawing"
@@ -234,7 +235,8 @@ const defaultSettings = {
   audioSpeed: 1.0,
   strokeTolerance: 0.5,
   colorBlindMode: false,
-  enableCaptions: false
+  enableCaptions: false,
+  enableArticulationCues: false
 }
 
 export default {
@@ -268,6 +270,9 @@ export default {
     // Step-by-step guided mode
     const guidedMode = ref(false)
     const currentStrokeStep = ref(0)  // 0-indexed
+
+    // Audio playback - store reference to prevent garbage collection
+    const currentAudio = ref(null)
 
     // Settings
     const showSettings = ref(false)
@@ -484,16 +489,52 @@ export default {
 
     const playCharacterAudio = async (character) => {
       try {
+        // Stop any currently playing audio
+        if (currentAudio.value) {
+          currentAudio.value.pause()
+          currentAudio.value.currentTime = 0
+          currentAudio.value = null
+        }
+
         const audio = new Audio(apiUrl(`/api/audio/${encodeURIComponent(character)}?voice=${settings.value.voiceGender}`))
         audio.playbackRate = settings.value.audioSpeed
+
+        // Store reference to prevent garbage collection
+        currentAudio.value = audio
 
         // Show caption if enabled
         if (settings.value.enableCaptions) {
           showCaption(character)
-          audio.onended = () => {
+        }
+
+        // Clean up when audio ends
+        audio.onended = () => {
+          if (settings.value.enableCaptions) {
             hideCaptionAfterDelay(800)
           }
+          // Clear reference when done
+          if (currentAudio.value === audio) {
+            currentAudio.value = null
+          }
         }
+
+        // Handle errors during playback
+        audio.onerror = () => {
+          console.error('Audio playback error')
+          if (currentAudio.value === audio) {
+            currentAudio.value = null
+          }
+        }
+
+        // Wait for audio to be ready before playing
+        await new Promise((resolve, reject) => {
+          audio.oncanplaythrough = resolve
+          audio.onerror = reject
+          // If already ready (cached), resolve immediately
+          if (audio.readyState >= 4) {
+            resolve()
+          }
+        })
 
         await audio.play()
       } catch (error) {

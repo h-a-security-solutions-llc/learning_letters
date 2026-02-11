@@ -114,10 +114,8 @@
         :current-attempt="currentAttempt"
         :best-of3-mode="bestOf3Mode"
         :attempts="attempts"
-        :show-debug-mode="showDebugMode"
         :show-trace-button="effectiveShowTraceButton"
         :show-best-of3-button="!isMultiplayerMode && settings.enableBestOf3"
-        :show-debug-button="settings.enableDebugMode"
         :show-step-by-step-button="effectiveShowStepByStepButton"
         :selected-font="settings.selectedFont"
         :voice-gender="settings.voiceGender"
@@ -133,10 +131,10 @@
         :enable-captions="settings.enableCaptions"
         :high-score-for-mode="highScoreForMode"
         :is-multiplayer="isMultiplayerMode"
+        :debug-mode="settings.enableDebugMode"
         @submit="onSubmitDrawing"
         @toggle-dash-tracing="toggleDashTracing"
         @toggle-best-of-3="toggleBestOf3"
-        @toggle-debug-mode="toggleDebugMode"
         @toggle-guided="toggleGuidedMode"
         @stroke-completed="onStrokeCompleted"
         @reset-guided-progress="onResetGuidedProgress"
@@ -152,7 +150,7 @@
         :user-drawing="userDrawing"
         :attempts="attempts"
         :best-of3-mode="bestOf3Mode"
-        :show-debug-mode="showDebugMode"
+        :show-debug-mode="settings.enableDebugMode"
         :voice-gender="settings.voiceGender"
         :auto-play-sound="settings.autoPlaySound"
         :audio-speed="settings.audioSpeed"
@@ -219,9 +217,6 @@ export default {
     const bestOf3Mode = ref(false)
     const attempts = ref([])
     const currentAttempt = ref(1)
-
-    // Debug mode
-    const showDebugMode = ref(false)
 
     // Step-by-step guided mode
     const guidedMode = ref(false)
@@ -497,10 +492,6 @@ export default {
       currentAttempt.value = 1
     }
 
-    const toggleDebugMode = () => {
-      showDebugMode.value = !showDebugMode.value
-    }
-
     const toggleDashTracing = () => {
       dashTracingMode.value = !dashTracingMode.value
       if (dashTracingMode.value && guidedMode.value) {
@@ -628,8 +619,6 @@ export default {
       onNextCharacter,
       goBack,
       toggleBestOf3,
-      showDebugMode,
-      toggleDebugMode,
       toggleDashTracing,
       guidedMode,
       currentStrokeStep,

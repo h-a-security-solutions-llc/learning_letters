@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stroke Data Analyzer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+      background: #1a1a2e;
+      color: white;
+    }
+    .controls {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    select, button {
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #2a2a4e;
+      color: white;
+    }
+    button {
+      cursor: pointer;
+      background: #4ECDC4;
+      color: #1a1a2e;
+      font-weight: 600;
+    }
+    button:hover { background: #44B09E; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .char-card {
+      background: #2a2a4e;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+    }
+    .char-card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .char-card .status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 10px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .status.ok { background: #4CAF50; }
+    .status.warning { background: #FF9800; }
+    .status.error { background: #f44336; }
+    .preview-container {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .preview-container canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .preview-container svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .stroke-info {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #aaa;
+    }
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .summary {
+      background: #2a2a4e;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Stroke Data Analyzer</h1>
+  <p>Compare stroke guide data against actual font rendering to identify mismatches.</p>
+
+  <div class="controls">
+    <label>
+      Font:
+      <select id="fontSelect">
+        <option value="Fredoka-Regular">Fredoka</option>
+        <option value="Nunito-Regular">Nunito</option>
+        <option value="PatrickHand-Regular">Patrick Hand</option>
+        <option value="PlaywriteUS-Regular">Playwrite US</option>
+        <option value="Schoolbell-Regular">Schoolbell</option>
+      </select>
+    </label>
+    <label>
+      Filter:
+      <select id="filterSelect">
+        <option value="all">All Characters</option>
+        <option value="uppercase">Uppercase (A-Z)</option>
+        <option value="lowercase">Lowercase (a-z)</option>
+        <option value="numbers">Numbers (0-9)</option>
+      </select>
+    </label>
+    <button id="analyzeBtn">Analyze</button>
+    <button id="exportBtn">Export Report</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background: rgba(76, 175, 80, 0.5);"></div>
+      <span>Start zone</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background: rgba(255, 152, 0, 0.5);"></div>
+      <span>End zone</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background: rgba(78, 205, 196, 0.8); width: 20px; height: 4px; border-radius: 2px;"></div>
+      <span>Stroke path</span>
+    </div>
+  </div>
+
+  <div id="summary" class="summary" style="display:none;"></div>
+  <div id="grid" class="grid"></div>
+
+  <script>
+    const CHARS = {
+      uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
+      lowercase: 'abcdefghijklmnopqrstuvwxyz'.split(''),
+      numbers: '0123456789'.split('')
+    };
+
+    const strokeFileMap = {
+      'Fredoka-Regular': 'fredoka',
+      'Nunito-Regular': 'nunito',
+      'PatrickHand-Regular': 'patrick-hand',
+      'PlaywriteUS-Regular': 'playwrite-us',
+      'Schoolbell-Regular': 'schoolbell'
+    };
+
+    const fontFamilyMap = {
+      'Fredoka-Regular': 'Fredoka',
+      'Nunito-Regular': 'Nunito',
+      'PatrickHand-Regular': 'Patrick Hand',
+      'PlaywriteUS-Regular': 'Playwrite US Modern',
+      'Schoolbell-Regular': 'Schoolbell'
+    };
+
+    let strokeData = null;
+
+    async function loadStrokeData(fontName) {
+      const fileName = strokeFileMap[fontName];
+      const response = await fetch(`/strokes/${fileName}.json`);
+      return response.json();
+    }
+
+    function renderCharacter(canvas, char, fontFamily) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      ctx.clearRect(0, 0, size, size);
+
+      // Render the character
+      ctx.fillStyle = '#333';
+      ctx.font = `${size * 0.75}px "${fontFamily}"`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(char, size / 2, size / 2);
+    }
+
+    function renderStrokeGuides(svg, strokes, size) {
+      svg.innerHTML = '';
+      if (!strokes || strokes.length === 0) return;
+
+      const scale = size / 100;
+
+      strokes.forEach((stroke, idx) => {
+        if (!stroke.points || stroke.points.length < 2) return;
+
+        // Draw path
+        const pathPoints = stroke.points.map(p => `${p[0] * scale},${p[1] * scale}`);
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${pathPoints.join(' L ')}`);
+        path.setAttribute('stroke', 'rgba(78, 205, 196, 0.8)');
+        path.setAttribute('stroke-width', '4');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(path);
+
+        // Draw start zone
+        const startCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        startCircle.setAttribute('cx', stroke.points[0][0] * scale);
+        startCircle.setAttribute('cy', stroke.points[0][1] * scale);
+        startCircle.setAttribute('r', 12);
+        startCircle.setAttribute('fill', 'rgba(76, 175, 80, 0.5)');
+        startCircle.setAttribute('stroke', '#4CAF50');
+        startCircle.setAttribute('stroke-width', '2');
+        svg.appendChild(startCircle);
+
+        // Draw stroke number
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', stroke.points[0][0] * scale);
+        text.setAttribute('y', stroke.points[0][1] * scale + 4);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('fill', '#4CAF50');
+        text.setAttribute('font-size', '12');
+        text.setAttribute('font-weight', 'bold');
+        text.textContent = idx + 1;
+        svg.appendChild(text);
+
+        // Draw end zone
+        const endCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        const lastPoint = stroke.points[stroke.points.length - 1];
+        endCircle.setAttribute('cx', lastPoint[0] * scale);
+        endCircle.setAttribute('cy', lastPoint[1] * scale);
+        endCircle.setAttribute('r', 12);
+        endCircle.setAttribute('fill', 'rgba(255, 152, 0, 0.5)');
+        endCircle.setAttribute('stroke', '#FF9800');
+        endCircle.setAttribute('stroke-width', '2');
+        svg.appendChild(endCircle);
+      });
+    }
+
+    function analyzeAlignment(char, charData) {
+      // Basic heuristics to detect potential issues
+      const issues = [];
+
+      if (!charData || !charData.strokes) {
+        return { status: 'error', issues: ['No stroke data'] };
+      }
+
+      const strokes = charData.strokes;
+
+      if (strokes.length === 0) {
+        return { status: 'error', issues: ['Empty strokes array'] };
+      }
+
+      // Check for suspiciously few/many strokes
+      const simpleChars = 'CIOSUclos0689';
+      const complexChars = 'BKMRW4';
+
+      if (simpleChars.includes(char) && strokes.length > 2) {
+        issues.push(`Unusually many strokes (${strokes.length}) for simple character`);
+      }
+
+      if (complexChars.includes(char) && strokes.length < 3) {
+        issues.push(`Unusually few strokes (${strokes.length}) for complex character`);
+      }
+
+      // Check for very short strokes
+      strokes.forEach((stroke, i) => {
+        if (stroke.points.length < 2) {
+          issues.push(`Stroke ${i + 1} has too few points`);
+        }
+        const len = strokeLength(stroke.points);
+        if (len < 10) {
+          issues.push(`Stroke ${i + 1} very short (${len.toFixed(0)})`);
+        }
+      });
+
+      if (issues.length === 0) {
+        return { status: 'ok', issues: [] };
+      } else if (issues.some(i => i.includes('No stroke') || i.includes('Empty'))) {
+        return { status: 'error', issues };
+      } else {
+        return { status: 'warning', issues };
+      }
+    }
+
+    function strokeLength(points) {
+      let len = 0;
+      for (let i = 1; i < points.length; i++) {
+        const dx = points[i][0] - points[i - 1][0];
+        const dy = points[i][1] - points[i - 1][1];
+        len += Math.sqrt(dx * dx + dy * dy);
+      }
+      return len;
+    }
+
+    async function analyze() {
+      const fontName = document.getElementById('fontSelect').value;
+      const filter = document.getElementById('filterSelect').value;
+      const fontFamily = fontFamilyMap[fontName];
+      const grid = document.getElementById('grid');
+      const summary = document.getElementById('summary');
+
+      grid.innerHTML = '<p>Loading...</p>';
+
+      try {
+        strokeData = await loadStrokeData(fontName);
+      } catch (e) {
+        grid.innerHTML = `<p style="color: #f44336;">Error loading stroke data: ${e.message}</p>`;
+        return;
+      }
+
+      let chars = [];
+      if (filter === 'all') {
+        chars = [...CHARS.uppercase, ...CHARS.lowercase, ...CHARS.numbers];
+      } else {
+        chars = CHARS[filter];
+      }
+
+      grid.innerHTML = '';
+
+      let stats = { ok: 0, warning: 0, error: 0 };
+
+      for (const char of chars) {
+        const charData = strokeData.characters[char];
+        const analysis = analyzeAlignment(char, charData);
+        stats[analysis.status]++;
+
+        const card = document.createElement('div');
+        card.className = 'char-card';
+
+        const title = document.createElement('h3');
+        title.textContent = `"${char}"`;
+        card.appendChild(title);
+
+        const status = document.createElement('span');
+        status.className = `status ${analysis.status}`;
+        status.textContent = analysis.status === 'ok' ? 'OK' :
+                             analysis.status === 'warning' ? 'Review' : 'Error';
+        card.appendChild(status);
+
+        const container = document.createElement('div');
+        container.className = 'preview-container';
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 200;
+        renderCharacter(canvas, char, fontFamily);
+        container.appendChild(canvas);
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 200 200');
+        renderStrokeGuides(svg, charData?.strokes, 200);
+        container.appendChild(svg);
+
+        card.appendChild(container);
+
+        const info = document.createElement('div');
+        info.className = 'stroke-info';
+        const strokeCount = charData?.strokes?.length || 0;
+        info.innerHTML = `${strokeCount} stroke${strokeCount !== 1 ? 's' : ''}`;
+        if (analysis.issues.length > 0) {
+          info.innerHTML += '<br>' + analysis.issues.map(i => `⚠️ ${i}`).join('<br>');
+        }
+        card.appendChild(info);
+
+        grid.appendChild(card);
+      }
+
+      summary.style.display = 'block';
+      summary.innerHTML = `
+        <strong>Summary for ${fontFamily}:</strong>
+        <span style="color: #4CAF50;">✓ ${stats.ok} OK</span> |
+        <span style="color: #FF9800;">⚠ ${stats.warning} Review</span> |
+        <span style="color: #f44336;">✗ ${stats.error} Error</span>
+        (${chars.length} total)
+      `;
+    }
+
+    function exportReport() {
+      const fontName = document.getElementById('fontSelect').value;
+      const cards = document.querySelectorAll('.char-card');
+      let report = `Stroke Data Report: ${fontName}\n${'='.repeat(50)}\n\n`;
+
+      cards.forEach(card => {
+        const char = card.querySelector('h3').textContent;
+        const status = card.querySelector('.status').textContent;
+        const info = card.querySelector('.stroke-info').textContent;
+        report += `${char}: ${status}\n  ${info.replace(/\n/g, '\n  ')}\n\n`;
+      });
+
+      const blob = new Blob([report], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stroke-report-${fontName}.txt`;
+      a.click();
+    }
+
+    document.getElementById('analyzeBtn').addEventListener('click', analyze);
+    document.getElementById('exportBtn').addEventListener('click', exportReport);
+
+    // Load fonts
+    const fonts = [
+      new FontFace('Fredoka', 'url(/fonts/Fredoka-Regular.ttf)'),
+      new FontFace('Nunito', 'url(/fonts/Nunito-Regular.ttf)'),
+      new FontFace('Patrick Hand', 'url(/fonts/PatrickHand-Regular.ttf)'),
+      new FontFace('Playwrite US Modern', 'url(/fonts/PlaywriteUS-Regular.ttf)'),
+      new FontFace('Schoolbell', 'url(/fonts/Schoolbell-Regular.ttf)')
+    ];
+
+    Promise.all(fonts.map(f => f.load().then(loaded => document.fonts.add(loaded))))
+      .then(() => {
+        console.log('Fonts loaded');
+        analyze(); // Auto-analyze on load
+      })
+      .catch(e => console.error('Font loading error:', e));
+  </script>
+</body>
+</html>

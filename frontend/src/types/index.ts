@@ -18,6 +18,7 @@ export interface AppSettings {
   strokeTolerance: number      // 0.5 | 0.75 | 1.0 (multiplier for zone radius)
   colorBlindMode: boolean
   enableCaptions: boolean
+  enableArticulationCues: boolean
 }
 
 // Player for multiplayer mode

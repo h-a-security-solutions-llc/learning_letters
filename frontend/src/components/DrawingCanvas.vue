@@ -38,8 +38,33 @@
       </div>
     </div>
 
-    <!-- Canvas Area -->
-    <div ref="canvasWrapper" class="canvas-wrapper">
+    <!-- Canvas and Articulation Cues Row -->
+    <div class="canvas-row">
+      <!-- Articulation Cues Panel (Left Side) -->
+      <div v-if="enableArticulationCues && articulationCue" class="articulation-panel">
+        <div class="articulation-header">
+          <span class="articulation-label">{{ articulationCue.lips_label }}</span>
+          <span v-if="articulationCue.voiced" class="voiced-badge">Voiced</span>
+          <span v-else class="voiceless-badge">Voiceless</span>
+        </div>
+        <div class="articulation-content">
+          <div class="cue-section">
+            <span class="cue-icon">👄</span>
+            <span class="cue-text">{{ articulationCue.mouth_position }}</span>
+          </div>
+          <div class="cue-section">
+            <span class="cue-icon">✋</span>
+            <span class="cue-text">{{ articulationCue.hand_cue }}</span>
+          </div>
+          <div class="cue-section tip">
+            <span class="cue-icon">💡</span>
+            <span class="cue-text">{{ articulationCue.teaching_tip }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas Area -->
+      <div ref="canvasWrapper" class="canvas-wrapper">
       <!-- Trace Image Overlay (dashed lines from font skeleton) -->
       <img
         v-if="showTraceOverlay"
@@ -56,31 +81,32 @@
         :viewBox="`0 0 ${canvasSize} ${canvasSize}`"
         preserveAspectRatio="xMidYMid meet"
       >
-        <!-- Completed strokes (dimmed) -->
-        <polyline
+        <!-- Completed strokes (dimmed) - using smooth path for curves -->
+        <path
           v-for="(stroke, index) in completedGuidedStrokes"
           :key="'completed-' + index"
-          :points="stroke.points.map(p => p.join(',')).join(' ')"
+          :d="generateSmoothPath(stroke.points)"
           fill="none"
           :stroke="guidedColors.pathColor || stroke.color"
           stroke-width="4"
           stroke-linecap="round"
           stroke-linejoin="round"
           opacity="0.3"
+          class="smooth-stroke"
         />
 
         <!-- Current stroke guide (if not complete) -->
         <g v-if="currentGuidedStroke && !isGuidedComplete">
-          <!-- Dashed path showing where to draw -->
-          <polyline
-            :points="currentGuidedStroke.points.map(p => p.join(',')).join(' ')"
+          <!-- Dashed path showing where to draw - smooth curve -->
+          <path
+            :d="generateSmoothPath(currentGuidedStroke.points)"
             fill="none"
             :stroke="guidedColors.pathColor || currentGuidedStroke.color"
             stroke-width="4"
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-dasharray="10,8"
-            class="guided-path"
+            class="guided-path smooth-stroke"
           />
 
           <!-- Start zone - stable circle with glowing ring -->
@@ -271,6 +297,7 @@
         @touchend.prevent="stopDrawing"
       />
     </div>
+    </div>
 
     <!-- Controls -->
     <div class="controls">
@@ -437,6 +464,10 @@ export default {
       type: Boolean,
       default: false
     },
+    enableArticulationCues: {
+      type: Boolean,
+      default: false
+    },
     highScoreForMode: {
       type: Number,
       default: null
@@ -465,6 +496,27 @@ export default {
     const strokeFeedback = ref(null)
     const isValidating = ref(false)
     const canvasStateBeforeStroke = ref(null)  // Save state to restore on failed stroke
+
+    // Articulation cues
+    const articulationCue = ref(null)
+
+    const fetchArticulationCue = async () => {
+      if (!props.enableArticulationCues || !props.character) {
+        articulationCue.value = null
+        return
+      }
+      try {
+        const response = await axios.get(
+          apiUrl(`/api/articulation/${encodeURIComponent(props.character)}`)
+        )
+        if (response.data?.cue) {
+          articulationCue.value = response.data.cue
+        }
+      } catch (error) {
+        console.error('Failed to fetch articulation cue:', error)
+        articulationCue.value = null
+      }
+    }
 
     const playAudio = () => {
       // Emit event for App.vue to handle (includes caption support)
@@ -812,7 +864,12 @@ export default {
           character: props.character,
           font: props.selectedFont || null,
           mode: mode,
-          record_progress: !props.isMultiplayer  // Don't record progress in multiplayer
+          record_progress: !props.isMultiplayer,  // Don't record progress in multiplayer
+          // Convert strokeTolerance (0.5/0.75/1.0) to tolerance (1.0/1.5/2.0)
+          // strokeTolerance 0.5 → tolerance 1.0 (normal, already forgiving)
+          // strokeTolerance 0.75 → tolerance 1.5 (more forgiving)
+          // strokeTolerance 1.0 → tolerance 2.0 (maximum forgiveness)
+          tolerance: props.strokeTolerance ? props.strokeTolerance * 2 : 1.0
         })
 
         emit('submit', {
@@ -924,6 +981,61 @@ export default {
       return `${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`
     }
 
+    // Generate smooth SVG path from points using Catmull-Rom spline
+    const generateSmoothPath = (points) => {
+      if (!points || points.length < 2) return ''
+
+      // If we have many points (high-resolution from skeleton), just use polyline-style path
+      // The many points already create smooth curves
+      if (points.length > 20) {
+        let d = `M ${points[0][0]},${points[0][1]}`
+        for (let i = 1; i < points.length; i++) {
+          d += ` L ${points[i][0]},${points[i][1]}`
+        }
+        return d
+      }
+
+      // For fewer points, use Catmull-Rom spline interpolation for smoothness
+      const catmullRomSpline = (p0, p1, p2, p3, t) => {
+        const t2 = t * t
+        const t3 = t2 * t
+        return [
+          0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t +
+                 (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 +
+                 (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+          0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t +
+                 (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 +
+                 (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)
+        ]
+      }
+
+      // Generate interpolated points
+      const interpolated = []
+      const n = points.length
+
+      for (let i = 0; i < n - 1; i++) {
+        const p0 = points[Math.max(0, i - 1)]
+        const p1 = points[i]
+        const p2 = points[Math.min(n - 1, i + 1)]
+        const p3 = points[Math.min(n - 1, i + 2)]
+
+        // Generate 8 points per segment for smoothness
+        for (let j = 0; j < 8; j++) {
+          const t = j / 8
+          interpolated.push(catmullRomSpline(p0, p1, p2, p3, t))
+        }
+      }
+      // Add the last point
+      interpolated.push(points[n - 1])
+
+      // Build SVG path
+      let d = `M ${interpolated[0][0]},${interpolated[0][1]}`
+      for (let i = 1; i < interpolated.length; i++) {
+        d += ` L ${interpolated[i][0]},${interpolated[i][1]}`
+      }
+      return d
+    }
+
     // Arrow for guided mode (canvas-sized coordinates)
     const getGuidedArrowPoints = (points) => {
       if (points.length < 2) return ''
@@ -975,6 +1087,10 @@ export default {
         if (props.guidedMode) {
           fetchGuidedStrokes()
         }
+        // Fetch articulation cues if enabled
+        if (props.enableArticulationCues) {
+          fetchArticulationCue()
+        }
       })
 
       window.addEventListener('resize', setupCanvas)
@@ -991,7 +1107,17 @@ export default {
         if (props.guidedMode) {
           fetchGuidedStrokes()
         }
+        fetchArticulationCue()
       })
+    })
+
+    // Fetch articulation cues when setting is toggled
+    watch(() => props.enableArticulationCues, (newVal) => {
+      if (newVal) {
+        fetchArticulationCue()
+      } else {
+        articulationCue.value = null
+      }
     })
 
     // Fetch guided strokes when guided mode is toggled on
@@ -1081,7 +1207,10 @@ export default {
       fetchGuidedStrokes,
       getGuidedArrowPoints,
       displayMultiplier,
-      showShapeIndicators
+      showShapeIndicators,
+      generateSmoothPath,
+      // Articulation cues
+      articulationCue
     }
   }
 }
@@ -1219,6 +1348,7 @@ export default {
   justify-content: center;
   position: relative;
   min-height: 200px;
+  min-width: 0;
 }
 
 .trace-overlay {
@@ -1349,6 +1479,12 @@ export default {
 
 .guided-path {
   animation: dash-move 1s linear infinite;
+}
+
+/* Smooth stroke rendering for high-quality curves */
+.smooth-stroke {
+  shape-rendering: geometricPrecision;
+  vector-effect: non-scaling-stroke;
 }
 
 @keyframes dash-move {
@@ -1495,6 +1631,180 @@ export default {
 
   .turn-progress {
     font-size: 0.8rem;
+  }
+}
+
+/* Canvas Row - side by side layout */
+.canvas-row {
+  flex: 1;
+  display: flex;
+  gap: 15px;
+  min-height: 0;
+  align-items: stretch;
+}
+
+/* Articulation Cues Panel */
+.articulation-panel {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0ea5e9;
+  border-radius: 12px;
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.articulation-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #bae6fd;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.articulation-content {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.articulation-label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #0369a1;
+}
+
+.voiced-badge {
+  background: #10b981;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.voiceless-badge {
+  background: #6b7280;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.cue-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.cue-section.tip {
+  background: #fef3c7;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-top: 2px;
+}
+
+.cue-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.cue-text {
+  font-size: 0.85rem;
+  color: #334155;
+  line-height: 1.3;
+}
+
+.cue-section.tip .cue-text {
+  color: #92400e;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+/* High contrast mode for articulation panel */
+.high-contrast .articulation-panel {
+  background: #000;
+  border-color: #fff;
+}
+
+.high-contrast .articulation-header {
+  border-bottom-color: #fff;
+  background: #222;
+}
+
+.high-contrast .articulation-label {
+  color: #fff;
+}
+
+.high-contrast .voiced-badge,
+.high-contrast .voiceless-badge {
+  border: 1px solid #fff;
+}
+
+.high-contrast .cue-text {
+  color: #fff;
+}
+
+.high-contrast .cue-section.tip {
+  background: #333;
+}
+
+.high-contrast .cue-section.tip .cue-text {
+  color: #fef3c7;
+}
+
+/* Mobile responsive - stack vertically on small screens */
+@media (max-width: 768px) {
+  .canvas-row {
+    flex-direction: column;
+  }
+
+  .articulation-panel {
+    width: 100%;
+    max-height: 150px;
+  }
+
+  .articulation-content {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cue-section {
+    flex: 1 1 45%;
+    min-width: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .articulation-panel {
+    max-height: 120px;
+  }
+
+  .articulation-label {
+    font-size: 0.9rem;
+  }
+
+  .cue-text {
+    font-size: 0.8rem;
+  }
+
+  .cue-icon {
+    font-size: 0.9rem;
+  }
+
+  .cue-section {
+    flex: 1 1 100%;
   }
 }
 </style>

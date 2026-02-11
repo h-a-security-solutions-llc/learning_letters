@@ -355,7 +355,7 @@ def normalize_line_thickness(
     return normalized
 
 
-def calculate_coverage_score(drawn_img: np.ndarray, reference_img: np.ndarray, tolerance: int = 4) -> float:
+def calculate_coverage_score(drawn_img: np.ndarray, reference_img: np.ndarray, tolerance: int = 10) -> float:
     """
     Calculate how much of the reference character is covered by the drawing.
     Uses tolerance-based coverage that forgives slight misalignments.
@@ -398,8 +398,9 @@ def calculate_accuracy_score(drawn_img: np.ndarray, reference_img: np.ndarray) -
     drawn_normalized = normalize_line_thickness(drawn_binary, target_thickness=5, apply_sanding=True)
     reference_normalized = normalize_line_thickness(reference_binary, target_thickness=5, apply_sanding=False)
 
-    # Dilate reference slightly to allow for minor deviations (scaled for 128px)
-    reference_zone = binary_dilation(reference_normalized, iterations=5)
+    # Dilate reference to allow for shape variations (scaled for 128px)
+    # Increased from 5 to 10 to be more forgiving for kindergartners
+    reference_zone = binary_dilation(reference_normalized, iterations=10)
 
     # Calculate how much of the drawing is within the acceptable zone
     if np.sum(drawn_normalized) == 0:
@@ -411,10 +412,15 @@ def calculate_accuracy_score(drawn_img: np.ndarray, reference_img: np.ndarray) -
     return min(accuracy, 1.0)
 
 
-def calculate_stroke_similarity(drawn_img: np.ndarray, reference_img: np.ndarray) -> float:
+def calculate_stroke_similarity(drawn_img: np.ndarray, reference_img: np.ndarray, tolerance: float = 1.0) -> float:
     """
     Calculate stroke-aware similarity using Chamfer distance + IoU.
     More appropriate for line drawings than SSIM.
+
+    Args:
+        drawn_img: Normalized drawn image array
+        reference_img: Normalized reference image array
+        tolerance: Scoring tolerance multiplier (1.0 = normal, higher = more forgiving)
 
     Returns 0-1 where 1 is perfect match.
     """
@@ -433,12 +439,16 @@ def calculate_stroke_similarity(drawn_img: np.ndarray, reference_img: np.ndarray
     if drawn_pixels == 0 or ref_pixels == 0:
         return 0.0
 
-    # 1. IoU (Intersection over Union) - 40% weight
-    intersection = np.sum(drawn_norm & ref_norm)
-    union = np.sum(drawn_norm | ref_norm)
+    # 1. IoU (Intersection over Union) - 60% weight (increased from 40%)
+    # Dilate both images before IoU so proximity counts as overlap
+    # This makes IoU more forgiving for shape variations
+    drawn_dilated = binary_dilation(drawn_norm, iterations=6)
+    ref_dilated = binary_dilation(ref_norm, iterations=6)
+    intersection = np.sum(drawn_dilated & ref_dilated)
+    union = np.sum(drawn_dilated | ref_dilated)
     iou = intersection / (union + 1e-8)
 
-    # 2. Chamfer distance - 60% weight
+    # 2. Chamfer distance - 40% weight (decreased from 60%)
     # Average distance from each drawn pixel to nearest reference pixel
     # and vice versa for symmetry
 
@@ -454,18 +464,20 @@ def calculate_stroke_similarity(drawn_img: np.ndarray, reference_img: np.ndarray
     chamfer_dist = (drawn_to_ref + ref_to_drawn) / 2
 
     # Convert distance to similarity score (0-1)
-    # Use a sigmoid-like function where distance of ~10 pixels gives ~0.5 similarity
-    # At 128px resolution, max reasonable distance is ~64px
-    max_dist = 20.0  # Distance at which similarity approaches 0
-    chamfer_score = np.exp(-chamfer_dist / (max_dist / 3))
+    # Much more forgiving decay for kindergartners
+    # Base decay 15 (was 6.67) - this alone nearly doubles tolerance
+    # Scales further with tolerance parameter
+    decay_factor = 15.0 * tolerance
+    chamfer_score = np.exp(-chamfer_dist / decay_factor)
 
     # Combine IoU and Chamfer with weights
-    similarity = iou * 0.4 + chamfer_score * 0.6
+    # Heavily favor IoU which is more forgiving: 60% IoU, 40% Chamfer (was 40/60)
+    similarity = iou * 0.6 + chamfer_score * 0.4
 
     return min(max(similarity, 0.0), 1.0)
 
 
-def score_drawing(drawn_image_data: str, character: str, font_name: Optional[str] = None) -> dict:
+def score_drawing(drawn_image_data: str, character: str, font_name: Optional[str] = None, tolerance: float = 1.0) -> dict:
     """
     Score a drawn character against the reference.
 
@@ -473,6 +485,7 @@ def score_drawing(drawn_image_data: str, character: str, font_name: Optional[str
         drawn_image_data: Base64 encoded image data (data URL or raw base64)
         character: The character that was supposed to be drawn
         font_name: The font to use for reference image (e.g., 'Fredoka-Regular')
+        tolerance: Scoring tolerance multiplier (1.0 = normal, higher = more forgiving)
 
     Returns:
         Dictionary with scores and reference image
@@ -504,12 +517,14 @@ def score_drawing(drawn_image_data: str, character: str, font_name: Optional[str
 
     # Calculate stroke-aware similarity (replaces SSIM for better line comparison)
     try:
-        similarity = calculate_stroke_similarity(drawn_processed, reference_processed)
+        similarity = calculate_stroke_similarity(drawn_processed, reference_processed, tolerance=tolerance)
     except Exception:
         similarity = 0.5
 
     # Combined score with rebalanced weights for better similarity influence
     combined_score = coverage * 0.35 + accuracy * 0.35 + similarity * 0.30
+
+    # No boosting - use the raw combined score
 
     # Convert to percentage (no artificial inflation needed since line thickness is normalized)
     percentage_score = int(min(100, combined_score * 100))

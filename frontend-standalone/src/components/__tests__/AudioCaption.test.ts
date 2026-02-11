@@ -93,7 +93,7 @@ describe('AudioCaption', () => {
         }
       })
 
-      expect(wrapper.props('caption')).toBe('Number 5')
+      expect(wrapper.find('.caption-character').text()).toBe('Number 5')
     })
 
     it('accepts isVisible prop', () => {
@@ -104,7 +104,7 @@ describe('AudioCaption', () => {
         }
       })
 
-      expect(wrapper.props('isVisible')).toBe(true)
+      expect(wrapper.find('.audio-caption-toast').exists()).toBe(true)
     })
 
     it('has default caption of null', () => {
@@ -114,7 +114,8 @@ describe('AudioCaption', () => {
         }
       })
 
-      expect(wrapper.props('caption')).toBeNull()
+      // With null caption, the toast should not render
+      expect(wrapper.find('.audio-caption-toast').exists()).toBe(false)
     })
 
     it('has default isVisible of false', () => {
@@ -124,7 +125,8 @@ describe('AudioCaption', () => {
         }
       })
 
-      expect(wrapper.props('isVisible')).toBe(false)
+      // With isVisible false (default), the toast should not render
+      expect(wrapper.find('.audio-caption-toast').exists()).toBe(false)
     })
   })
 

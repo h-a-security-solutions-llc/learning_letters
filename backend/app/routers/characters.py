@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.services.font_strokes import get_character_strokes, get_font_metadata
+from app.services.stroke_path_generator import generate_hybrid_stroke_data
 
 router = APIRouter()
 
@@ -890,7 +891,7 @@ async def get_character_audio_info(character: str):  # pragma: no cover
         "character": character,
         "name": data["name"],
         "type": data["type"],
-        "phonetic": data["phonetic"],
+        "phonetic": data.get("phonetic", ""),
         "sound": data["sound"],
         "words": get_available_words(character),
         "random_word": get_random_word(character),
@@ -911,73 +912,153 @@ async def generate_all_audio_files():  # pragma: no cover
 
 
 @router.get("/characters/{character}/guided-strokes")
-async def get_guided_strokes(character: str, size: int = 400, font: Optional[str] = None):
+async def get_guided_strokes(
+    character: str,
+    size: int = 400,
+    font: Optional[str] = None,
+    use_skeleton: bool = True
+):
     """
     Get stroke data with enhanced metadata for step-by-step guided instruction.
-    Uses font-specific stroke definitions when available.
+
+    Uses the same skeleton extraction as the trace image to ensure the
+    step-by-step guide matches the trace perfectly.
+
+    Args:
+        character: The character to get strokes for
+        size: Canvas size in pixels (default 400)
+        font: Optional font name
+        use_skeleton: If True (default), use skeleton-extracted paths that match the trace.
+                     If False, use JSON-defined points directly.
     """
-    # Try to get from font-specific JSON first
+    scale = size / 100  # Convert from 0-100 to requested size
+    tolerance_radius = size * 0.25  # 25% of canvas size for start/end zones
+
+    # Use skeleton-derived strokes (same source as trace image)
+    if use_skeleton:
+        skeleton_data = generate_hybrid_stroke_data(character, size, font)
+        if skeleton_data and skeleton_data.get("strokes"):
+            guided_strokes = []
+            for i, stroke in enumerate(skeleton_data["strokes"]):
+                points = stroke["points"]
+                direction = stroke.get("direction", "down")
+
+                # Points are already in 0-100 space, scale to requested size
+                scaled_points = [[p[0] * scale, p[1] * scale] for p in points]
+
+                # Get start and end points
+                start_point = scaled_points[0]
+                end_point = scaled_points[-1]
+
+                # Get kid-friendly instruction based on direction
+                instruction = DIRECTION_INSTRUCTIONS.get(
+                    direction,
+                    "Follow the path from the green circle to the arrow."
+                )
+
+                # Assign color
+                color = STROKE_COLORS[i % len(STROKE_COLORS)]
+
+                guided_strokes.append({
+                    "order": i + 1,
+                    "points": scaled_points,
+                    "direction": direction,
+                    "instruction": instruction,
+                    "start_zone": {
+                        "x": start_point[0],
+                        "y": start_point[1],
+                        "radius": tolerance_radius
+                    },
+                    "end_zone": {
+                        "x": end_point[0],
+                        "y": end_point[1],
+                        "radius": tolerance_radius
+                    },
+                    "color": color,
+                    "curvature": stroke.get("curvature", "unknown"),
+                })
+
+            return {
+                "character": character,
+                "total_strokes": len(guided_strokes),
+                "strokes": guided_strokes,
+                "font": font,
+                "source": skeleton_data.get("source", "skeleton")
+            }
+
+    # Fallback to JSON-only system
     char_data = get_character_strokes(character, font)
 
-    # Fallback to hardcoded CHARACTERS if not found in JSON
     if char_data is None:
         if character not in CHARACTERS:
             return {"error": "Character not found"}
         char_data = CHARACTERS[character]
 
     strokes = char_data["strokes"]
-    scale = size / 100  # Convert from 0-100 to requested size
-    tolerance_radius = size * 0.25  # 25% of canvas size for start/end zones (generous for kids)
 
     guided_strokes = []
     for i, stroke in enumerate(strokes):
         points = stroke["points"]
         direction = stroke.get("direction", "down")
 
-        # Scale points to requested size
         scaled_points = [[p[0] * scale, p[1] * scale] for p in points]
-
-        # Get start and end points
         start_point = scaled_points[0]
         end_point = scaled_points[-1]
 
-        # Get kid-friendly instruction
-        instruction = DIRECTION_INSTRUCTIONS.get(direction, "Follow the path from the green circle to the arrow.")
-
-        # Assign color (cycle through colors)
-        color = STROKE_COLORS[i % len(STROKE_COLORS)]
-
-        guided_strokes.append(
-            {
-                "order": i + 1,
-                "points": scaled_points,
-                "direction": direction,
-                "instruction": instruction,
-                "start_zone": {"x": start_point[0], "y": start_point[1], "radius": tolerance_radius},
-                "end_zone": {"x": end_point[0], "y": end_point[1], "radius": tolerance_radius},
-                "color": color,
-            }
+        instruction = DIRECTION_INSTRUCTIONS.get(
+            direction,
+            "Follow the path from the green circle to the arrow."
         )
 
-    return {"character": character, "total_strokes": len(strokes), "strokes": guided_strokes, "font": font}
+        color = STROKE_COLORS[i % len(STROKE_COLORS)]
+
+        guided_strokes.append({
+            "order": i + 1,
+            "points": scaled_points,
+            "direction": direction,
+            "instruction": instruction,
+            "start_zone": {
+                "x": start_point[0],
+                "y": start_point[1],
+                "radius": tolerance_radius
+            },
+            "end_zone": {
+                "x": end_point[0],
+                "y": end_point[1],
+                "radius": tolerance_radius
+            },
+            "color": color,
+        })
+
+    return {
+        "character": character,
+        "total_strokes": len(strokes),
+        "strokes": guided_strokes,
+        "font": font,
+        "source": "json"
+    }
 
 
 @router.post("/characters/{character}/validate-stroke")
 async def validate_stroke(character: str, request: StrokeValidationRequest):
     """
     Validate a drawn stroke against the expected stroke path.
+    Uses the same skeleton-derived paths as the visual guide to ensure consistency.
     Returns validation result with kid-friendly feedback.
     """
-    # Try to get from font-specific JSON first
-    char_data = get_character_strokes(character, request.font)
+    # Use skeleton-derived strokes (same as visual display)
+    skeleton_data = generate_hybrid_stroke_data(character, 400, request.font)
 
-    # Fallback to hardcoded CHARACTERS if not found in JSON
-    if char_data is None:
-        if character not in CHARACTERS:
-            return {"error": "Character not found"}
-        char_data = CHARACTERS[character]
-
-    strokes: list = char_data["strokes"]  # type: ignore[assignment]
+    if skeleton_data and skeleton_data.get("strokes"):
+        strokes = skeleton_data["strokes"]
+    else:
+        # Fallback to JSON if skeleton extraction failed
+        char_data = get_character_strokes(character, request.font)
+        if char_data is None:
+            if character not in CHARACTERS:
+                return {"error": "Character not found"}
+            char_data = CHARACTERS[character]
+        strokes = char_data["strokes"]
 
     if request.stroke_index < 0 or request.stroke_index >= len(strokes):
         return {"error": "Invalid stroke index"}
@@ -1172,3 +1253,62 @@ async def get_all_character_word_images(character: str, high_contrast: bool = Fa
         "sound": char_data.get("sound"),
         "name": char_data.get("name"),
     }
+
+
+# === ARTICULATION CUES ===
+
+
+@router.get("/articulation/{character}")
+async def get_character_articulation(character: str):
+    """
+    Get articulation cue data for a character.
+
+    Returns detailed information about how to physically produce the sound,
+    including mouth position, hand cues, teaching tips, and more.
+    """
+    from app.services.articulation_cues import get_articulation_cue
+
+    cue = get_articulation_cue(character)
+    if not cue:
+        return {"error": "Character not found or no articulation data available"}
+
+    return {
+        "character": character,
+        "cue": cue,
+    }
+
+
+@router.get("/articulation/{character}/media")
+async def get_character_articulation_media(character: str):
+    """
+    Get media paths (images/animations) for articulation cues.
+
+    Returns paths to visual aids for teaching the sound.
+    """
+    from app.services.articulation_cues import get_articulation_cue, get_articulation_media
+
+    cue = get_articulation_cue(character)
+    media = get_articulation_media(character)
+
+    if not cue:
+        return {"error": "Character not found"}
+
+    return {
+        "character": character,
+        "sound_key": cue.get("sound_key"),
+        "lips_label": cue.get("lips_label"),
+        "media": media,
+    }
+
+
+@router.get("/articulation")
+async def get_all_articulation_data():
+    """
+    Get all articulation cue data.
+
+    Returns the complete set of sound cues and letter mappings.
+    Useful for caching on the frontend.
+    """
+    from app.services.articulation_cues import get_all_articulation_data as get_data
+
+    return get_data()

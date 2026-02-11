@@ -6,17 +6,20 @@ This script generates kid-friendly clipart-style images for vocabulary words
 using ComfyUI.
 
 Usage:
-    # Generate all missing word images
+    # Generate all missing word images (both regular and high-contrast)
     python scripts/generate_word_images.py
+
+    # Generate only regular versions
+    python scripts/generate_word_images.py --regular
+
+    # Generate only high-contrast versions
+    python scripts/generate_word_images.py --high-contrast
 
     # Generate specific words (comma-separated)
     python scripts/generate_word_images.py apple,ball,cat
 
     # Force regenerate specific words (even if they exist)
     python scripts/generate_word_images.py --force apple,ball
-
-    # Generate high-contrast versions
-    python scripts/generate_word_images.py --high-contrast
 
     # List all words without generating
     python scripts/generate_word_images.py --list
@@ -60,7 +63,7 @@ APPROVED_REGULAR_DIR = SCRIPT_DIR.parent / "app" / "static" / "words" / "regular
 APPROVED_HC_DIR = SCRIPT_DIR.parent / "app" / "static" / "words" / "high-contrast"
 
 # Default model
-DEFAULT_MODEL = "hassakuXLIllustrious_v33.safetensors"
+DEFAULT_MODEL = "dreamshaperXL_v21TurboDPMSDE.safetensors"
 
 # Models to evaluate (short name -> filename)
 EVAL_MODELS = {
@@ -73,9 +76,24 @@ EVAL_MODELS = {
 # Prompt templates - simple and direct
 REGULAR_PROMPT = "{word}, highly detailed"
 
-HIGH_CONTRAST_PROMPT = "{word}, highly detailed, high contrast, bold colors"
+HIGH_CONTRAST_PROMPT = "({word} with high contrasting colors:1.5), highly detailed, sharp edges, solid black outlines, flat colors"
 
 NEGATIVE_PROMPT = "text, watermark, blurry, low quality"
+
+# Number words that indicate a count at the start of a phrase
+NUMBER_WORDS = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"}
+
+
+def format_word_for_prompt(word: str) -> str:
+    """Format word for prompt - add 'single' prefix unless it starts with a number word."""
+    word_lower = word.lower()
+    # Check if word starts with a number word (e.g., "five fingers")
+    for num_word in NUMBER_WORDS:
+        if word_lower.startswith(num_word + " ") or word_lower == num_word:
+            # Number words already specify quantity, use as-is
+            return word
+    # Regular words get "single" prefix to avoid multiple objects
+    return f"single {word}"
 
 
 def get_all_unique_words() -> list[str]:
@@ -177,7 +195,7 @@ def wait_for_completion(prompt_id: str, timeout: int = 120) -> bool:
 
 def generate_with_model(word: str, model: str, output_filename: str, output_dir: Path) -> str | None:
     """Generate an image for a word using a specific model."""
-    prompt = REGULAR_PROMPT.format(word=word)
+    prompt = REGULAR_PROMPT.format(word=format_word_for_prompt(word))
 
     # Create and queue workflow
     workflow = create_workflow(prompt, NEGATIVE_PROMPT, output_filename, model)
@@ -218,8 +236,9 @@ def generate_with_model(word: str, model: str, output_filename: str, output_dir:
 
 def evaluate_models(word: str) -> None:
     """Generate the same word with multiple models for comparison."""
+    formatted_word = format_word_for_prompt(word)
     print(f"\nEvaluating models with word: '{word}'")
-    print(f"Prompt: {REGULAR_PROMPT.format(word=word)}")
+    print(f"Prompt: {REGULAR_PROMPT.format(word=formatted_word)}")
     print("=" * 50)
 
     results = {}
@@ -280,7 +299,7 @@ def generate_word_image(
 
     # Create prompt
     prompt_template = HIGH_CONTRAST_PROMPT if high_contrast else REGULAR_PROMPT
-    prompt = prompt_template.format(word=word)
+    prompt = prompt_template.format(word=format_word_for_prompt(word))
 
     # Create and queue workflow
     workflow = create_workflow(prompt, NEGATIVE_PROMPT, output_filename, model)
@@ -333,10 +352,16 @@ def main():
         help="Force regenerate even if image exists",
     )
     parser.add_argument(
+        "--regular",
+        "-r",
+        action="store_true",
+        help="Generate only regular versions",
+    )
+    parser.add_argument(
         "--high-contrast",
         "-hc",
         action="store_true",
-        help="Generate high-contrast versions",
+        help="Generate only high-contrast versions",
     )
     parser.add_argument(
         "--list",
@@ -402,30 +427,50 @@ def main():
     else:
         words = all_words
 
-    print(f"Generating {'high-contrast' if args.high_contrast else 'regular'} images")
+    # Determine which versions to generate
+    # If neither flag is set, generate both; otherwise only the specified one(s)
+    if not args.regular and not args.high_contrast:
+        # Default: generate both
+        versions = [("regular", False), ("high-contrast", True)]
+    else:
+        versions = []
+        if args.regular:
+            versions.append(("regular", False))
+        if args.high_contrast:
+            versions.append(("high-contrast", True))
+
+    print(f"Generating: {', '.join(v[0] for v in versions)}")
     print(f"Model: {args.model}")
     print(f"Output directory: {PENDING_REVIEW_DIR}")
     print(f"Words to process: {len(words)}")
+    print(f"Total images: {len(words) * len(versions)}")
     print("-" * 50)
 
     results = {"success": [], "failed": [], "skipped": []}
 
-    for i, word in enumerate(words):
-        print(f"\n[{i + 1}/{len(words)}] {word}")
+    total_items = len(words) * len(versions)
+    current_item = 0
 
-        result = generate_word_image(word, high_contrast=args.high_contrast, force=args.force, model=args.model)
+    for word in words:
+        for version_name, is_high_contrast in versions:
+            current_item += 1
+            print(f"\n[{current_item}/{total_items}] {word} ({version_name})")
 
-        if result:
-            if "pending_review" in result:
-                results["success"].append(word)
+            result = generate_word_image(
+                word, high_contrast=is_high_contrast, force=args.force, model=args.model
+            )
+
+            if result:
+                if "pending_review" in result:
+                    results["success"].append(f"{word} ({version_name})")
+                else:
+                    results["skipped"].append(f"{word} ({version_name})")
             else:
-                results["skipped"].append(word)
-        else:
-            results["failed"].append(word)
+                results["failed"].append(f"{word} ({version_name})")
 
-        # Delay between generations to avoid overwhelming ComfyUI
-        if i < len(words) - 1:
-            time.sleep(args.delay)
+            # Delay between generations to avoid overwhelming ComfyUI
+            if current_item < total_items:
+                time.sleep(args.delay)
 
     print("\n" + "=" * 50)
     print("SUMMARY")

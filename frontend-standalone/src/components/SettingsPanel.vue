@@ -340,6 +340,10 @@
                 </div>
               </label>
             </div>
+
+            <button class="preview-button" @click="showFontPreview">
+              Preview All Characters
+            </button>
           </div>
 
           <!-- Debug Mode -->
@@ -357,11 +361,26 @@
         </div>
       </div>
     </div>
+
+    <!-- Font Preview Modal -->
+    <div v-if="fontPreviewVisible" class="preview-modal" @click.self="fontPreviewVisible = false">
+      <div class="preview-content">
+        <div class="preview-header">
+          <h3>{{ getCurrentFontDisplayName() }}</h3>
+          <button class="close-button" @click="fontPreviewVisible = false">
+            ×
+          </button>
+        </div>
+        <div class="preview-body">
+          <canvas ref="previewCanvas" class="preview-canvas" />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { playCharacterAudio } from '@/services/audio'
 
 export default {
@@ -375,6 +394,8 @@ export default {
   emits: ['close', 'update:settings'],
   setup(props, { emit }) {
     const localSettings = ref({ ...props.settings })
+    const fontPreviewVisible = ref(false)
+    const previewCanvas = ref(null)
 
     const fontsDetailed = ref([
       {
@@ -433,11 +454,129 @@ export default {
       }
     }
 
+    const getCurrentFontDisplayName = () => {
+      const font = fontsDetailed.value.find(f => f.name === localSettings.value.selectedFont)
+      return font ? font.display_name : localSettings.value.selectedFont
+    }
+
+    const showFontPreview = async () => {
+      fontPreviewVisible.value = true
+
+      // Wait for the modal and canvas to render
+      await nextTick()
+
+      const canvas = previewCanvas.value
+      if (!canvas) return
+
+      // Map font names to actual font families and files
+      const fontMap = {
+        'Fredoka-Regular': { family: 'Fredoka', file: 'Fredoka-Regular.ttf' },
+        'Nunito-Regular': { family: 'Nunito', file: 'Nunito-Regular.ttf' },
+        'PlaywriteUS-Regular': { family: 'PlaywriteUS', file: 'PlaywriteUS-Regular.ttf' },
+        'PatrickHand-Regular': { family: 'PatrickHand', file: 'PatrickHand-Regular.ttf' },
+        'Schoolbell-Regular': { family: 'Schoolbell', file: 'Schoolbell-Regular.ttf' }
+      }
+      const fontInfo = fontMap[localSettings.value.selectedFont] || fontMap['Fredoka-Regular']
+      const fontFamily = fontInfo.family
+
+      // Ensure the font is loaded before drawing
+      try {
+        // Check if font is already loaded
+        const testFont = `48px ${fontFamily}`
+        if (!document.fonts.check(testFont)) {
+          // Load the font using FontFace API
+          const fontFace = new FontFace(fontFamily, `url(/fonts/${fontInfo.file})`)
+          await fontFace.load()
+          document.fonts.add(fontFace)
+        }
+        // Wait for all fonts to be ready
+        await document.fonts.ready
+      } catch (error) {
+        console.error('Failed to load font:', error)
+      }
+
+      const ctx = canvas.getContext('2d')
+      const dpr = window.devicePixelRatio || 1
+
+      // Set canvas size
+      const width = 600
+      const height = 480
+      canvas.width = width * dpr
+      canvas.height = height * dpr
+      canvas.style.width = width + 'px'
+      canvas.style.height = height + 'px'
+      ctx.scale(dpr, dpr)
+
+      // Clear and set background
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, width, height)
+
+      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+      const lowercase = 'abcdefghijklmnopqrstuvwxyz'
+      const numbers = '0123456789'
+
+      const fontSize = 42
+      const lineHeight = 55
+      const charsPerLine = 13
+      let y = 30
+
+      // Draw section label
+      ctx.font = '13px sans-serif'
+      ctx.fillStyle = '#888888'
+      ctx.textAlign = 'left'
+      ctx.fillText('Uppercase', 20, y)
+      y += 20
+
+      // Draw uppercase
+      ctx.font = `${fontSize}px ${fontFamily}`
+      ctx.fillStyle = '#333333'
+      for (let i = 0; i < uppercase.length; i += charsPerLine) {
+        const line = uppercase.slice(i, i + charsPerLine)
+        y += lineHeight
+        ctx.fillText(line, 20, y)
+      }
+
+      y += 30
+
+      // Draw section label
+      ctx.font = '13px sans-serif'
+      ctx.fillStyle = '#888888'
+      ctx.fillText('Lowercase', 20, y)
+      y += 20
+
+      // Draw lowercase
+      ctx.font = `${fontSize}px ${fontFamily}`
+      ctx.fillStyle = '#333333'
+      for (let i = 0; i < lowercase.length; i += charsPerLine) {
+        const line = lowercase.slice(i, i + charsPerLine)
+        y += lineHeight
+        ctx.fillText(line, 20, y)
+      }
+
+      y += 30
+
+      // Draw section label
+      ctx.font = '13px sans-serif'
+      ctx.fillStyle = '#888888'
+      ctx.fillText('Numbers', 20, y)
+      y += 20
+
+      // Draw numbers
+      ctx.font = `${fontSize}px ${fontFamily}`
+      ctx.fillStyle = '#333333'
+      y += lineHeight
+      ctx.fillText(numbers, 20, y)
+    }
+
     return {
       localSettings,
       fontsDetailed,
+      fontPreviewVisible,
+      previewCanvas,
       updateSetting,
-      previewVoice
+      previewVoice,
+      showFontPreview,
+      getCurrentFontDisplayName
     }
   }
 }
@@ -811,6 +950,77 @@ export default {
   line-height: 1.3;
 }
 
+.preview-button {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.preview-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Font Preview Modal */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.preview-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 650px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.preview-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.preview-body {
+  padding: 20px;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.preview-canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
 @media (max-width: 600px) {
   .settings-panel {
     width: 100%;
@@ -828,6 +1038,10 @@ export default {
 
   .radio-label {
     font-size: 0.75rem;
+  }
+
+  .preview-content {
+    max-width: 100%;
   }
 }
 </style>

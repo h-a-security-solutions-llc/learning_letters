@@ -36,6 +36,7 @@ const defaultSettings: AppSettings = {
   strokeTolerance: 0.5,
   colorBlindMode: false,
   enableCaptions: false,
+  enableArticulationCues: false,
 }
 
 /**

@@ -279,10 +279,99 @@ def simplify_path(path: list, tolerance: int = 3) -> list:
     return simplified
 
 
-def generate_animated_guide_data(character: str, size: int = 400, font_name: Optional[str] = None) -> dict:
+def simplify_path_high_resolution(path: list, tolerance: float = 1.5) -> list:
     """
-    Generate stroke path data for animated guide.
-    Returns paths that can be animated on the frontend.
+    Simplify path with minimal reduction for high-resolution output.
+    Uses smaller tolerance to preserve curve details.
+    """
+    if len(path) < 2:
+        return path
+
+    simplified = [path[0]]
+
+    for point in path[1:]:
+        last = simplified[-1]
+        dist = ((point[0] - last[0]) ** 2 + (point[1] - last[1]) ** 2) ** 0.5
+        if dist >= tolerance:
+            simplified.append(point)
+
+    # Always include last point
+    if simplified[-1] != path[-1]:
+        simplified.append(path[-1])
+
+    return simplified
+
+
+def classify_path_curvature(path: list) -> str:
+    """
+    Classify a path as straight, curved, or complex based on deviation from straight line.
+
+    Returns:
+        "straight" - nearly linear path
+        "curved" - single arc or gentle curve
+        "complex" - S-curves, loops, or multiple direction changes
+    """
+    if len(path) < 3:
+        return "straight"
+
+    import numpy as np
+
+    points = np.array(path)
+    start = points[0]
+    end = points[-1]
+    line_vec = end - start
+    line_length = np.linalg.norm(line_vec)
+
+    if line_length < 1:
+        return "straight"
+
+    line_unit = line_vec / line_length
+
+    # Calculate perpendicular deviation for each point
+    deviations = []
+    for point in points[1:-1]:
+        t = np.dot(point - start, line_unit)
+        projection = start + t * line_unit
+        deviation = np.linalg.norm(point - projection)
+        deviations.append(deviation)
+
+    if not deviations:
+        return "straight"
+
+    max_deviation = max(deviations)
+    avg_deviation = sum(deviations) / len(deviations)
+    relative_deviation = max_deviation / line_length
+
+    # Check for direction changes (sign changes in deviation from line)
+    # This helps identify S-curves and complex shapes
+    cross_products = []
+    for point in points[1:-1]:
+        vec_to_point = point - start
+        cross = line_vec[0] * vec_to_point[1] - line_vec[1] * vec_to_point[0]
+        cross_products.append(cross)
+
+    direction_changes = 0
+    for i in range(1, len(cross_products)):
+        if cross_products[i] * cross_products[i - 1] < 0:
+            direction_changes += 1
+
+    if relative_deviation < 0.05:
+        return "straight"
+    elif direction_changes >= 2 or relative_deviation > 0.4:
+        return "complex"
+    else:
+        return "curved"
+
+
+def generate_high_resolution_guide_data(
+    character: str, size: int = 400, font_name: Optional[str] = None
+) -> dict:
+    """
+    Generate high-resolution stroke path data for smooth curve rendering.
+    Uses minimal simplification to preserve curve details.
+
+    Returns paths with many more points than generate_animated_guide_data(),
+    suitable for smooth polyline rendering or bezier conversion.
     """
     # Generate character image
     char_img = generate_character_image(character, size, font_name)
@@ -293,11 +382,206 @@ def generate_animated_guide_data(character: str, size: int = 400, font_name: Opt
     # Skeletonize
     skeleton = skeletonize(binary)
 
-    # Extract stroke paths
-    raw_paths = extract_stroke_paths(skeleton, min_length=15)
+    # Extract stroke paths with lower minimum length
+    raw_paths = extract_stroke_paths(skeleton, min_length=10)
 
-    # Simplify paths for smoother animation
-    paths = [simplify_path(path, tolerance=4) for path in raw_paths]
+    # Use high-resolution simplification (tolerance=1.5 instead of 4)
+    paths = [simplify_path_high_resolution(path, tolerance=1.5) for path in raw_paths]
+
+    strokes = []
+    for i, path in enumerate(paths):
+        if len(path) < 2:
+            continue
+
+        # Convert to percentage coordinates (0-100)
+        normalized_path = [[p[0] * 100 / size, p[1] * 100 / size] for p in path]
+
+        # Classify curvature
+        curvature = classify_path_curvature(path)
+
+        strokes.append({
+            "points": normalized_path,
+            "order": i + 1,
+            "curvature": curvature,
+            "point_count": len(normalized_path)
+        })
+
+    return {
+        "character": character,
+        "size": size,
+        "strokes": strokes,
+        "stroke_count": len(strokes),
+        "high_resolution": True
+    }
+
+
+def merge_connected_stroke_paths(paths: list, tolerance: float = 3.0) -> list:
+    """
+    Merge stroke paths that are connected (endpoints within tolerance).
+    This creates continuous strokes from fragments caused by skeleton junctions.
+    """
+    if len(paths) <= 1:
+        return paths
+
+    import math
+
+    def distance(p1, p2):
+        return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+    # Keep merging until no more merges possible
+    merged = [list(p) for p in paths]
+    changed = True
+
+    while changed:
+        changed = False
+        new_merged = []
+        used = set()
+
+        for i, path_i in enumerate(merged):
+            if i in used:
+                continue
+
+            current = list(path_i)
+            used.add(i)
+
+            # Try to extend current path by finding connected paths
+            extended = True
+            while extended:
+                extended = False
+                for j, path_j in enumerate(merged):
+                    if j in used:
+                        continue
+
+                    # Check all connection possibilities
+                    if distance(current[-1], path_j[0]) <= tolerance:
+                        # Append path_j to current
+                        current = current + path_j[1:]
+                        used.add(j)
+                        extended = True
+                        changed = True
+                    elif distance(current[-1], path_j[-1]) <= tolerance:
+                        # Append reversed path_j to current
+                        current = current + list(reversed(path_j))[1:]
+                        used.add(j)
+                        extended = True
+                        changed = True
+                    elif distance(current[0], path_j[-1]) <= tolerance:
+                        # Prepend path_j to current
+                        current = path_j[:-1] + current
+                        used.add(j)
+                        extended = True
+                        changed = True
+                    elif distance(current[0], path_j[0]) <= tolerance:
+                        # Prepend reversed path_j to current
+                        current = list(reversed(path_j))[:-1] + current
+                        used.add(j)
+                        extended = True
+                        changed = True
+
+            new_merged.append(current)
+
+        merged = new_merged
+
+    return merged
+
+
+def orient_stroke_for_writing(points: list) -> list:
+    """
+    Orient a stroke so it flows in a natural writing direction.
+    - Vertical strokes: top to bottom
+    - Horizontal strokes: left to right
+    - Diagonal: top to bottom takes priority
+    """
+    if len(points) < 2:
+        return points
+
+    start = points[0]
+    end = points[-1]
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+
+    # Determine if we should reverse
+    should_reverse = False
+
+    if abs(dy) > abs(dx):
+        # Primarily vertical - should go top to bottom (increasing y)
+        if dy < 0:
+            should_reverse = True
+    else:
+        # Primarily horizontal - should go left to right (increasing x)
+        if dx < 0:
+            should_reverse = True
+
+    if should_reverse:
+        return list(reversed(points))
+    return points
+
+
+def order_strokes_for_writing(strokes: list) -> list:
+    """
+    Order strokes in a logical writing sequence and orient each stroke
+    for natural drawing direction.
+    Generally: top-to-bottom, left-to-right, with main strokes before details.
+    """
+    if not strokes:
+        return strokes
+
+    # First, orient each stroke for natural direction
+    for stroke in strokes:
+        stroke["points"] = orient_stroke_for_writing(stroke["points"])
+
+    if len(strokes) <= 1:
+        return strokes
+
+    def stroke_bounds(stroke):
+        pts = stroke["points"]
+        if not pts:
+            return (0, 0, 0, 0)
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        return (min(xs), min(ys), max(xs), max(ys))
+
+    # Sort by: top-most point, then left-most
+    def sort_key(stroke):
+        bounds = stroke_bounds(stroke)
+        # Primary: top (min y), Secondary: left (min x)
+        return (bounds[1], bounds[0])
+
+    return sorted(strokes, key=sort_key)
+
+
+def generate_animated_guide_data(character: str, size: int = 400, font_name: Optional[str] = None) -> dict:
+    """
+    Generate stroke path data for animated guide.
+    Returns paths that can be animated on the frontend.
+
+    Strokes are merged at junction points and ordered for logical writing sequence.
+    """
+    # Generate character image
+    char_img = generate_character_image(character, size, font_name)
+
+    # Convert to binary
+    binary = char_img < 128
+
+    # Skeletonize
+    skeleton = skeletonize(binary)
+
+    # Extract stroke paths - use lower min_length to capture curved segments
+    raw_paths = extract_stroke_paths(skeleton, min_length=5)
+
+    # Simplify paths for smoother animation - use lower tolerance for better curves
+    paths = [simplify_path(path, tolerance=2) for path in raw_paths]
+
+    # Merge connected paths to form complete strokes
+    # Use larger tolerance to handle gaps from skeleton fragmentation at curves
+    char_size = size * 0.6  # Approximate character size
+    merge_tolerance = char_size * 0.20  # 20% of character size for aggressive merging
+    merged_paths = merge_connected_stroke_paths(paths, tolerance=merge_tolerance)
+
+    # Filter out noise paths - keep only substantial strokes
+    # Use minimum length based on point count (not size) since paths are densely sampled
+    min_path_length = 40  # Minimum 40 points for a valid stroke
+    merged_paths = [p for p in merged_paths if len(p) >= min_path_length]
 
     # Define high-contrast colors for each stroke
     colors = [
@@ -312,7 +596,7 @@ def generate_animated_guide_data(character: str, size: int = 400, font_name: Opt
     ]
 
     strokes = []
-    for i, path in enumerate(paths):
+    for i, path in enumerate(merged_paths):
         if len(path) < 2:
             continue
 
@@ -320,6 +604,13 @@ def generate_animated_guide_data(character: str, size: int = 400, font_name: Opt
         normalized_path = [[p[0] * 100 / size, p[1] * 100 / size] for p in path]
 
         strokes.append({"points": normalized_path, "color": colors[i % len(colors)], "order": i + 1})
+
+    # Order strokes for logical writing sequence
+    strokes = order_strokes_for_writing(strokes)
+
+    # Re-assign order numbers after sorting
+    for i, stroke in enumerate(strokes):
+        stroke["order"] = i + 1
 
     return {"character": character, "size": size, "strokes": strokes, "stroke_count": len(strokes)}
 

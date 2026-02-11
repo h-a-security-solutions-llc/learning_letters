@@ -5,6 +5,7 @@
 
 mod scoring;
 mod image_ops;
+mod stroke_extraction;
 
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
@@ -30,6 +31,9 @@ pub struct ScoringResult {
 pub struct WasmScoringResult {
     inner: ScoringResult,
     reference_image: Vec<u8>,
+    // Debug images
+    debug_user_processed: Vec<u8>,
+    debug_reference_processed: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -67,6 +71,16 @@ impl WasmScoringResult {
     #[wasm_bindgen(getter)]
     pub fn reference_image(&self) -> Vec<u8> {
         self.reference_image.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn debug_user_processed(&self) -> Vec<u8> {
+        self.debug_user_processed.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn debug_reference_processed(&self) -> Vec<u8> {
+        self.debug_reference_processed.clone()
     }
 }
 
@@ -114,4 +128,29 @@ pub fn generate_reference_image(
 
     scoring::generate_reference_image_internal(char, font_data, size)
         .map_err(|e| JsValue::from_str(&e))
+}
+
+/// Extract strokes from a font glyph for guided tracing
+///
+/// # Arguments
+/// * `font_data` - TTF font bytes
+/// * `character` - The character to extract strokes for
+/// * `size` - Rendering size for stroke extraction (larger = more detail)
+///
+/// # Returns
+/// JSON string containing StrokeData with strokes array
+#[wasm_bindgen]
+pub fn extract_strokes(
+    font_data: &[u8],
+    character: &str,
+    size: u32,
+) -> Result<JsValue, JsValue> {
+    let char = character.chars().next()
+        .ok_or_else(|| JsValue::from_str("Empty character string"))?;
+
+    let stroke_data = stroke_extraction::extract_strokes(font_data, char, size)
+        .map_err(|e| JsValue::from_str(&e))?;
+
+    serde_wasm_bindgen::to_value(&stroke_data)
+        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
 }
