@@ -21,7 +21,7 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 
 # Image processing
 image = { version = "0.25", default-features = false, features = ["png"] }
-imageproc = "0.24"
+imageproc = "0.26"
 rusttype = "0.9"
 
 [dependencies.getrandom]
